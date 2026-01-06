@@ -1,0 +1,13 @@
+PROGRAM ::= ( EXPRESSION ';' )*
+
+EXPRESSION ::= UNARY BINOPRHS
+
+UNARY ::=
+    | PRIMARY
+    | ('+' | '-') UNARY
+
+BINOPRHS ::= ( ('+' | '-' | '*' | '/') UNARY )*
+
+PRIMARY ::=
+    | number
+    | '(' EXPRESSION ')'
