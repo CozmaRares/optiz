@@ -5,6 +5,7 @@
 #include <string>
 
 namespace optiz::fe {
+
     struct SrcLocation {
         uint line;
         uint column;

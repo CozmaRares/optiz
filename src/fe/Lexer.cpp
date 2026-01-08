@@ -5,6 +5,7 @@
 #include "fe/Diagnostic.hpp"
 
 namespace optiz::fe {
+
     Token::Token(TokenType type) : type(type) {}
 
     Token::Token(TokenType type, std::string lexeme, SrcLocation location)

@@ -63,6 +63,7 @@ namespace optiz::fe {
         void skipWhitespace();
         Token tokenizeNumber();
     };
+
 }  // namespace optiz::fe
 
 #endif  // LEXER_HPP

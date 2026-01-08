@@ -1,10 +1,11 @@
 #include "fe/Parser.hpp"
 
+#include <llvm/Support/Casting.h>
+
 #include <memory>
 #include <string>
 
 #include "fe/AST.hpp"
-#include "fe/ASTPrinter.hpp"
 
 #define NO_PRECEDENCE             -1
 #define NEUTRAL_PRECEDENCE        0
@@ -30,7 +31,7 @@ namespace optiz::fe {
             this->panicMode = false;
 
             std::unique_ptr<GenericASTNode> expression = this->parseExpression();
-            if (!expression) {
+            if (llvm::isa<ErrorAST>(expression)) {
                 synchronize();
                 continue;
             }
@@ -50,8 +51,8 @@ namespace optiz::fe {
         if (expressions.empty()) {
             startLocation = endLocation = this->currentToken.location.first;
         } else {
-            startLocation = expressions.front()->startLocation;
-            endLocation   = expressions.back()->endLocation;
+            startLocation = expressions.front()->getStartLocation();
+            endLocation   = expressions.back()->getEndLocation();
         }
 
         return std::make_unique<ProgramAST>(std::move(expressions), startLocation, endLocation);
@@ -61,7 +62,7 @@ namespace optiz::fe {
     std::unique_ptr<GenericASTNode> Parser::parseExpression() {
         auto lhs = this->parseUnary();
         if (!lhs) {
-            return nullptr;
+            return std::make_unique<ErrorAST>();
         }
 
         return this->parseBinOpRHS(std::move(lhs), NEUTRAL_PRECEDENCE);
@@ -79,10 +80,10 @@ namespace optiz::fe {
 
         auto rhs = this->parseUnary();
         if (!rhs) {
-            return nullptr;
+            return std::make_unique<ErrorAST>();
         }
 
-        return std::make_unique<UnaryExprAST>(op, std::move(rhs), startLocation, rhs->endLocation);
+        return std::make_unique<UnaryExprAST>(op, std::move(rhs), startLocation, rhs->getEndLocation());
     }
 
     // BINOPRHS ::= ( ('+' | '-' | '*' | '/') UNARY )*
@@ -98,19 +99,19 @@ namespace optiz::fe {
 
             auto rhs = this->parseUnary();
             if (!rhs) {
-                return nullptr;
+                return std::make_unique<ErrorAST>();
             }
 
             int nextPrecedence = getPrecedence(this->currentToken.type);
             if (precedence < nextPrecedence) {
                 rhs = this->parseBinOpRHS(std::move(rhs), nextPrecedence);
                 if (!rhs) {
-                    return nullptr;
+                    return std::make_unique<ErrorAST>();
                 }
             }
 
-            SrcLocation startLocation = lhs->startLocation;
-            SrcLocation endLocation   = rhs->endLocation;
+            SrcLocation startLocation = lhs->getStartLocation();
+            SrcLocation endLocation   = rhs->getEndLocation();
 
             lhs = std::make_unique<BinaryExprAST>(std::move(lhs), std::move(rhs), op, startLocation, endLocation);
         }
@@ -121,10 +122,10 @@ namespace optiz::fe {
 
             auto rhs = this->parsePrimary();
             if (!rhs)
-                return nullptr;
+                return std::make_unique<ErrorAST>();
 
-            SrcLocation startLocation = lhs->startLocation;
-            SrcLocation endLocation   = rhs->endLocation;
+            SrcLocation startLocation = lhs->getStartLocation();
+            SrcLocation endLocation   = rhs->getEndLocation();
 
             lhs = std::make_unique<BinaryExprAST>(std::move(lhs), std::move(rhs), op, startLocation, endLocation);
         }
@@ -146,18 +147,18 @@ namespace optiz::fe {
             advance();
             auto expr = parseExpression();
             if (!expr)
-                return nullptr;
+                return std::make_unique<ErrorAST>();
 
             if (this->currentToken.type != TokenType::RParen) {
                 this->reportError(currentToken.location.first, "Expected ')'");
-                return nullptr;
+                return std::make_unique<ErrorAST>();
             }
             advance();
             return expr;
         }
 
         this->reportError(currentToken.location.first, "Expected number or '('");
-        return nullptr;
+        return std::make_unique<ErrorAST>();
     }
 
     void Parser::advance() {
@@ -210,7 +211,7 @@ bool isSupportedBinaryOperation(optiz::fe::TokenType operation) {
     }
 }
 
-int getPrecedence(optiz::fe::TokenType operation) {
+inline int getPrecedence(optiz::fe::TokenType operation) {
     using namespace optiz::fe;
 
     switch (operation) {

@@ -7,8 +7,11 @@ using namespace optiz::fe;
 
 int main() {
     DiagnosticEngine TheDiagnosticEngine;
-    Parser parser("1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
+    Parser parser("* 1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
     std::unique_ptr<GenericASTNode> ast = parser.parseProgram();
+
+    ASTPrinter printer;
+    ast->accept(printer);
 
     if (TheDiagnosticEngine.hasReports()) {
         TheDiagnosticEngine.dump();
@@ -17,9 +20,6 @@ int main() {
             return 1;
         }
     }
-
-    ASTPrinter printer;
-    ast->accept(printer);
 
     return 0;
 }
