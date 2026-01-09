@@ -1,13 +1,67 @@
-PROGRAM ::= ( EXPRESSION ';' )*
+PROGRAM ::= (STATEMENT | FUNCTION | STRUCT)*
 
-EXPRESSION ::= UNARY BINOPRHS
+STATEMENT ::=
+    | ASSIGNMENT ';'
+    | MUTABLE_ASSIGNMENT ';'
+    | IF
+    | WHILE
+    | EXPRESSION ';
 
-UNARY ::=
-    | PRIMARY
-    | ('+' | '-') UNARY
+EXPRESSION ::=
+    | BINARY_EXPR
+    | SCOPE
 
-BINOPRHS ::= ( ('+' | '-' | '*' | '/') UNARY )*
+BINARY_EXPR ::= UNARY (BIN_OPERATOR UNARY)*
+BIN_OPERATOR ::=
+    | '==' | '!=' | '<' | '<=' | '>' | '>=' # Comparison
+    | '&&' | '||' | ''                      # Logical
+    | '+' | '-' | '*' | '/' | '%'           # Arithmetic
+    | '<<' | '>>' | '&' | '|' | '^'         # Bitwise
+
+UNARY ::= UN_OPERATOR UNARY | PRIMARY
+UN_OPERATOR ::= 
+    | '+' | '-' | '!' # Arithmetic
+    | '~'             # Bitwise
+    | '*' | '&'       # Pointer
 
 PRIMARY ::=
-    | number
+    | number | 'true' | 'false' | CHAR | STRING
+    | ARRAY_LITERAL
+    | IDENTIFIER SUFFIX?
     | '(' EXPRESSION ')'
+
+ARRAY_LITERAL ::= '[' (EXPRESSION (',' EXPRESSION)*)? ']'
+
+SUFFIX ::=
+    | '(' (EXPRESSION (',' EXPRESSION)*)? ')' SUFFIX # Funcion Call
+    | '[' EXPRESSION ']' SUFFIX                      # Array Access
+    | '.' IDENTIFIER SUFFIX                          # Member
+    | '=' EXPRESSION                                 # REASSIGNMENT
+
+ANNOTATION ::= '@' ( ANNOTATION_MULTI | ANNOTATION_BASE )
+ANNOTATION_MULTI ::= 'multi' '(' ANNOTATION_BASE (',' ANNOTATION_BASE)* ')'
+ANNOTATION_BASE  ::= IDENTIFIER ('=' EXPRESSION)?
+
+SCOPE ::= ANNOTATION? '{' STATEMENT* 'return' EXPRESSION '}'
+
+TYPE_DEFINITION ::= ':' TYPE
+TYPE ::=
+    | IDENTIFIER
+    | '[' TYPE (';' number)? ']'
+    | '*' TYPE
+
+IF ::= 'if' EXPRESSION 'then' SCOPE ('else' (IF | SCOPE))?
+
+WHILE ::= 'while' EXPRESSION 'do' SCOPE
+
+FUNCTION ::= 'fn' IDENTIFIER '(' PARAMS? ')' TYPE_DEFINITION SCOPE
+PARAMS ::= IDENTIFIER TYPE_DEFINITION (',' IDENTIFIER TYPE_DEFINITION)*
+
+STRUCT ::= 'struct' IDENTIFIER '{' (IDENTIFIER TYPE_DEFINITION)* '}'
+
+CHAR ::= '\'' char '\''
+STRING ::= '"' char* '"'
+LITERAL ::= number | 'true' | 'false' | CHAR | STRING
+
+number ::= \d+ # any Unicode digit
+char ::= \u{0000}-\u{0x10FFFF} # any Unicode character
