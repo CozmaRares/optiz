@@ -1,5 +1,4 @@
-#ifndef ASTVISITOR_HPP
-#define ASTVISITOR_HPP
+#pragma once
 
 namespace optiz::fe {
 
@@ -13,13 +12,11 @@ namespace optiz::fe {
     public:
         virtual ~ASTVisitor() = default;
 
-        virtual void visit(const UnaryExprAST& node)  = 0;
-        virtual void visit(const BinaryExprAST& node) = 0;
-        virtual void visit(const NumberExprAST& node) = 0;
-        virtual void visit(const ProgramAST& node)    = 0;
-        virtual void visit(const ErrorAST& node)      = 0;
+        virtual void Visit(const UnaryExprAST& node)  = 0;
+        virtual void Visit(const BinaryExprAST& node) = 0;
+        virtual void Visit(const NumberExprAST& node) = 0;
+        virtual void Visit(const ProgramAST& node)    = 0;
+        virtual void Visit(const ErrorAST& node)      = 0;
     };
 
 }  // namespace optiz::fe
-
-#endif  // ASTVISITOR_HPP

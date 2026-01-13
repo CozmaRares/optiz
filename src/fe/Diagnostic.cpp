@@ -5,87 +5,94 @@
 
 #define MAX_ERRORS 20
 
+static std::ostream& getOutputStream(optiz::fe::DiagnosticLevel level);
+static void printLabel(optiz::fe::DiagnosticLevel level, std::ostream& out);
+
 namespace optiz::fe {
 
-    std::ostream& getOutputStream(DiagnosticLevel level) {
-        switch (level) {
-            case DiagnosticLevel::Info:
-            case DiagnosticLevel::Warning:
-                return std::cout;
+    void Diagnostic::Print() const {
+        std::ostream& out = getOutputStream(m_Level);
 
-            case DiagnosticLevel::Error:
-            case DiagnosticLevel::Fatal:
-                return std::cerr;
-        }
+        out << "[" << m_Location.m_File << ":" << m_Location.m_Line << ":" << m_Location.m_Column << "] ";
 
-        return std::cout;
+        printLabel(m_Level, out);
+
+        out << ": " << m_Message << std::endl;
     }
 
-    void printLabel(DiagnosticLevel level, std::ostream& out) {
-        std::string label;
-        std::string color;
-
-        switch (level) {
-            case DiagnosticLevel::Info:
-                label = "Info";
-                color = "";
-                break;
-            case DiagnosticLevel::Warning:
-                label = "Warning";
-                color = "\033[1;33m";  // Bold Yellow
-                break;
-            case DiagnosticLevel::Error:
-                label = "Error";
-                color = "\033[1;31m";  // Bold Red
-                break;
-            case DiagnosticLevel::Fatal:
-                label = "Fatal Error";
-                color = "\033[1;41;37m";  // White text on Red background
-                break;
-        }
-
-        out << color << label << "\033[0m";
-    }
-
-    void Diagnostic::print() const {
-        std::ostream& out = getOutputStream(this->level);
-
-        out << "[" << loc.file << ":" << loc.line << ":" << loc.column << "] ";
-
-        printLabel(this->level, out);
-
-        out << ": " << message << std::endl;
-    }
-
-    void DiagnosticEngine::report(SrcLocation loc, std::string msg, DiagnosticLevel level) {
-        this->errorsOccured = this->errorsOccured || level >= DiagnosticLevel::Error;
+    void DiagnosticEngine::Report(SrcLocation loc, std::string msg, DiagnosticLevel level) {
+        m_ErrorsOccured = m_ErrorsOccured || level >= DiagnosticLevel::Error;
 
         Diagnostic diagnostic = { loc, msg, level };
 
         if (level == DiagnosticLevel::Fatal) {
-            reports.insert(reports.begin(), diagnostic);
-            this->dump();
+            m_Reports.insert(m_Reports.begin(), diagnostic);
+            Dump();
 
             exit(1);
         }
-        reports.push_back(diagnostic);
+        m_Reports.push_back(diagnostic);
 
-        if (reports.size() > MAX_ERRORS) {
-            this->report(loc, "Too many errors, aborting...", DiagnosticLevel::Fatal);
+        if (m_Reports.size() > MAX_ERRORS) {
+            Report(loc, "Too many errors, aborting...", DiagnosticLevel::Fatal);
         }
     }
 
-    void DiagnosticEngine::dump() const {
-        for (const auto& d : reports) {
-            d.print();
+    void DiagnosticEngine::Dump() const {
+        for (const auto& d : m_Reports) {
+            d.Print();
         }
     }
 
-    bool DiagnosticEngine::hasReports() const {
-        return !reports.empty();
+    bool DiagnosticEngine::HasReports() const {
+        return !m_Reports.empty();
     }
-    bool DiagnosticEngine::hasErrors() const {
-        return this->errorsOccured;
+    bool DiagnosticEngine::HasErrors() const {
+        return m_ErrorsOccured;
     }
 
 }  // namespace optiz::fe
+
+static std::ostream& getOutputStream(optiz::fe::DiagnosticLevel level) {
+    using optiz::fe::DiagnosticLevel;
+
+    switch (level) {
+        case DiagnosticLevel::Info:
+        case DiagnosticLevel::Warning:
+            return std::cout;
+
+        case DiagnosticLevel::Error:
+        case DiagnosticLevel::Fatal:
+            return std::cerr;
+    }
+
+    return std::cout;
+}
+
+static void printLabel(optiz::fe::DiagnosticLevel level, std::ostream& out) {
+    using optiz::fe::DiagnosticLevel;
+
+    std::string label;
+    std::string color;
+
+    switch (level) {
+        case DiagnosticLevel::Info:
+            label = "Info";
+            color = "";
+            break;
+        case DiagnosticLevel::Warning:
+            label = "Warning";
+            color = "\033[1;33m";  // Bold Yellow
+            break;
+        case DiagnosticLevel::Error:
+            label = "Error";
+            color = "\033[1;31m";  // Bold Red
+            break;
+        case DiagnosticLevel::Fatal:
+            label = "Fatal Error";
+            color = "\033[1;41;37m";  // White text on Red background
+            break;
+    }
+
+    out << color << label << "\033[0m";
+}

@@ -1,5 +1,4 @@
-#ifndef SRCLOCATION_HPP
-#define SRCLOCATION_HPP
+#pragma once
 
 #include <ostream>
 #include <string>
@@ -7,9 +6,9 @@
 namespace optiz::fe {
 
     struct SrcLocation {
-        uint line;
-        uint column;
-        std::string file;
+        uint m_Line;
+        uint m_Column;
+        std::string m_File;
 
         friend std::ostream& operator<<(std::ostream& out, const SrcLocation& loc);
         friend class Lexer;
@@ -19,5 +18,3 @@ namespace optiz::fe {
     };
 
 }  // namespace optiz::fe
-
-#endif  // SRCLOCATION_HPP

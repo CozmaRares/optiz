@@ -20,169 +20,169 @@ int getPrecedence(optiz::fe::TokenType operation);
 namespace optiz::fe {
 
     Parser::Parser(const std::string& input, const std::string& file, DiagnosticEngine& diagnosticEngine)
-        : lexer(input, file, diagnosticEngine), diagnosticEngine(diagnosticEngine) {
-        this->advance();
+        : m_Lexer(input, file, diagnosticEngine), m_DiagnosticEngine(diagnosticEngine) {
+        Advance();
     }
 
     // PROGRAM ::= ( EXPRESSION ';' )*
-    std::unique_ptr<GenericASTNode> Parser::parseProgram() {
+    std::unique_ptr<GenericASTNode> Parser::ParseProgram() {
         std::vector<std::unique_ptr<GenericASTNode>> expressions;
-        while (this->currentToken.type != TokenType::EndOfFile) {
-            this->panicMode = false;
+        while (m_CurrentToken.m_Type != TokenType::EndOfFile) {
+            m_PanicModeEnabled = false;
 
-            std::unique_ptr<GenericASTNode> expression = this->parseExpression();
+            std::unique_ptr<GenericASTNode> expression = ParseExpression();
             if (llvm::isa<ErrorAST>(expression)) {
-                synchronize();
+                Synchronize();
                 continue;
             }
 
-            if (this->currentToken.type != TokenType::SemiColon) {
-                this->reportError(this->currentToken.location.first, "Expected ';'");
-                synchronize();
+            if (m_CurrentToken.m_Type != TokenType::SemiColon) {
+                ReportError(m_CurrentToken.m_StartLocation, "Expected ';'");
+                Synchronize();
                 continue;
             }
 
-            advance();
+            Advance();
             expressions.push_back(std::move(expression));
         }
 
         SrcLocation startLocation, endLocation;
 
         if (expressions.empty()) {
-            startLocation = endLocation = this->currentToken.location.first;
+            startLocation = endLocation = m_CurrentToken.m_StartLocation;
         } else {
-            startLocation = expressions.front()->getStartLocation();
-            endLocation   = expressions.back()->getEndLocation();
+            startLocation = expressions.front()->GetStartLocation();
+            endLocation   = expressions.back()->GetEndLocation();
         }
 
         return std::make_unique<ProgramAST>(std::move(expressions), startLocation, endLocation);
     }
 
     // EXPRESSION ::= UNARY BINOPRHS
-    std::unique_ptr<GenericASTNode> Parser::parseExpression() {
-        auto lhs = this->parseUnary();
+    std::unique_ptr<GenericASTNode> Parser::ParseExpression() {
+        auto lhs = ParseUnary();
         if (!lhs) {
             return std::make_unique<ErrorAST>();
         }
 
-        return this->parseBinOpRHS(std::move(lhs), NEUTRAL_PRECEDENCE);
+        return ParseBinOpRHS(std::move(lhs), NEUTRAL_PRECEDENCE);
     }
 
     // UNARY ::= PRIMARY | ('+' | '-') UNARY
-    std::unique_ptr<GenericASTNode> Parser::parseUnary() {
-        if (!isSupportedUnaryOperation(this->currentToken.type)) {
-            return this->parsePrimary();
+    std::unique_ptr<GenericASTNode> Parser::ParseUnary() {
+        if (!isSupportedUnaryOperation(m_CurrentToken.m_Type)) {
+            return ParsePrimary();
         }
 
-        TokenType op              = this->currentToken.type;
-        SrcLocation startLocation = this->currentToken.location.first;
-        advance();
+        TokenType op              = m_CurrentToken.m_Type;
+        SrcLocation startLocation = m_CurrentToken.m_StartLocation;
+        Advance();
 
-        auto rhs = this->parseUnary();
+        auto rhs = ParseUnary();
         if (!rhs) {
             return std::make_unique<ErrorAST>();
         }
 
-        return std::make_unique<UnaryExprAST>(op, std::move(rhs), startLocation, rhs->getEndLocation());
+        return std::make_unique<UnaryExprAST>(op, std::move(rhs), startLocation, rhs->GetEndLocation());
     }
 
     // BINOPRHS ::= ( ('+' | '-' | '*' | '/') UNARY )*
-    std::unique_ptr<GenericASTNode> Parser::parseBinOpRHS(std::unique_ptr<GenericASTNode> lhs, int originalPrecedence) {
+    std::unique_ptr<GenericASTNode> Parser::ParseBinOpRHS(std::unique_ptr<GenericASTNode> lhs, int originalPrecedence) {
         while (true) {
-            int precedence = getPrecedence(this->currentToken.type);
+            int precedence = getPrecedence(m_CurrentToken.m_Type);
             if (precedence < originalPrecedence) {
                 return lhs;
             }
 
-            TokenType op = this->currentToken.type;
-            advance();
+            TokenType op = m_CurrentToken.m_Type;
+            Advance();
 
-            auto rhs = this->parseUnary();
+            auto rhs = ParseUnary();
             if (!rhs) {
                 return std::make_unique<ErrorAST>();
             }
 
-            int nextPrecedence = getPrecedence(this->currentToken.type);
+            int nextPrecedence = getPrecedence(m_CurrentToken.m_Type);
             if (precedence < nextPrecedence) {
-                rhs = this->parseBinOpRHS(std::move(rhs), nextPrecedence);
+                rhs = ParseBinOpRHS(std::move(rhs), nextPrecedence);
                 if (!rhs) {
                     return std::make_unique<ErrorAST>();
                 }
             }
 
-            SrcLocation startLocation = lhs->getStartLocation();
-            SrcLocation endLocation   = rhs->getEndLocation();
+            SrcLocation startLocation = lhs->GetStartLocation();
+            SrcLocation endLocation   = rhs->GetEndLocation();
 
             lhs = std::make_unique<BinaryExprAST>(std::move(lhs), std::move(rhs), op, startLocation, endLocation);
         }
 
-        while (isSupportedBinaryOperation(this->currentToken.type)) {
-            TokenType op = this->currentToken.type;
-            advance();
+        while (isSupportedBinaryOperation(m_CurrentToken.m_Type)) {
+            TokenType op = m_CurrentToken.m_Type;
+            Advance();
 
-            auto rhs = this->parsePrimary();
+            auto rhs = ParsePrimary();
             if (!rhs)
                 return std::make_unique<ErrorAST>();
 
-            SrcLocation startLocation = lhs->getStartLocation();
-            SrcLocation endLocation   = rhs->getEndLocation();
+            SrcLocation startLocation = lhs->GetStartLocation();
+            SrcLocation endLocation   = rhs->GetEndLocation();
 
             lhs = std::make_unique<BinaryExprAST>(std::move(lhs), std::move(rhs), op, startLocation, endLocation);
         }
         return lhs;
     }
 
-    std::unique_ptr<GenericASTNode> Parser::parsePrimary() {
-        if (this->currentToken.type == TokenType::Number) {
-            double value              = std::stod(this->currentToken.lexeme);
-            SrcLocation startLocation = this->currentToken.location.first;
-            SrcLocation endLocation   = this->currentToken.location.second;
-            advance();
+    std::unique_ptr<GenericASTNode> Parser::ParsePrimary() {
+        if (m_CurrentToken.m_Type == TokenType::Number) {
+            double value              = std::stod(m_CurrentToken.m_Lexeme);
+            SrcLocation startLocation = m_CurrentToken.m_StartLocation;
+            SrcLocation endLocation   = m_CurrentToken.m_EndLocation;
+            Advance();
 
             auto node = std::make_unique<NumberExprAST>(value, startLocation, endLocation);
             return node;
         }
 
-        if (this->currentToken.type == TokenType::LParen) {
-            advance();
-            auto expr = parseExpression();
+        if (m_CurrentToken.m_Type == TokenType::LParen) {
+            Advance();
+            auto expr = ParseExpression();
             if (!expr)
                 return std::make_unique<ErrorAST>();
 
-            if (this->currentToken.type != TokenType::RParen) {
-                this->reportError(currentToken.location.first, "Expected ')'");
+            if (m_CurrentToken.m_Type != TokenType::RParen) {
+                ReportError(m_CurrentToken.m_StartLocation, "Expected ')'");
                 return std::make_unique<ErrorAST>();
             }
-            advance();
+            Advance();
             return expr;
         }
 
-        this->reportError(currentToken.location.first, "Expected number or '('");
+        ReportError(m_CurrentToken.m_StartLocation, "Expected number or '('");
         return std::make_unique<ErrorAST>();
     }
 
-    void Parser::advance() {
+    void Parser::Advance() {
         do {
-            this->currentToken = this->lexer.nextToken();
-        } while (this->currentToken.type == TokenType::Error);
+            m_CurrentToken = m_Lexer.GetNextToken();
+        } while (m_CurrentToken.m_Type == TokenType::Error);
     }
 
-    void Parser::synchronize() {
-        while (this->currentToken.type != TokenType::EndOfFile) {
-            if (this->currentToken.type == TokenType::SemiColon) {
-                advance();
+    void Parser::Synchronize() {
+        while (m_CurrentToken.m_Type != TokenType::EndOfFile) {
+            if (m_CurrentToken.m_Type == TokenType::SemiColon) {
+                Advance();
                 return;
             }
-            advance();
+            Advance();
         }
     }
 
-    void Parser::reportError(SrcLocation loc, std::string msg) {
-        if (panicMode)
+    void Parser::ReportError(SrcLocation loc, std::string msg) {
+        if (m_PanicModeEnabled)
             return;
 
-        diagnosticEngine.report(loc, msg, DiagnosticLevel::Error);
-        panicMode = true;
+        m_DiagnosticEngine.Report(loc, msg, DiagnosticLevel::Error);
+        m_PanicModeEnabled = true;
     }
 
 }  // namespace optiz::fe

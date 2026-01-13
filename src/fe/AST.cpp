@@ -1,69 +1,69 @@
 #include "fe/AST.hpp"
 
 #define ACCEPT_IMPL(T) \
-    void T::accept(ASTVisitor& visitor) const { visitor.visit(*this); }
+    void T::accept(ASTVisitor& visitor) const { visitor.Visit(*this); }
 
 #define CLASSOF_IMPL(T) \
-    bool T::classof(const GenericASTNode* n) { return n->getKind() == NodeKind::T; }
+    bool T::classof(const GenericASTNode* n) { return n->GetKind() == NodeKind::T; }
 
 namespace optiz::fe {
 
     GenericASTNode::GenericASTNode(NodeKind kind, SrcLocation startLocation, SrcLocation endLocation)
-        : kind(kind), startLocation(startLocation), endLocation(endLocation) {}
+        : m_Kind(kind), m_StartLocation(startLocation), m_EndLocation(endLocation) {}
 
     ErrorAST::ErrorAST() : GenericASTNode(NodeKind::ErrorAST, SrcLocation(), SrcLocation()) {}
 
     NumberExprAST::NumberExprAST(int value, SrcLocation startLocation, SrcLocation endLocation)
-        : GenericASTNode(NodeKind::NumberExprAST, startLocation, endLocation), value(value) {}
+        : GenericASTNode(NodeKind::NumberExprAST, startLocation, endLocation), m_Value(value) {}
 
     UnaryExprAST::UnaryExprAST(TokenType operation, std::unique_ptr<GenericASTNode> expr, SrcLocation startLocation, SrcLocation endLocation)
-        : GenericASTNode(NodeKind::UnaryExprAST, startLocation, endLocation), operation(operation), expr(std::move(expr)) {}
+        : GenericASTNode(NodeKind::UnaryExprAST, startLocation, endLocation), m_Operation(operation), m_Expression(std::move(expr)) {}
 
     BinaryExprAST::BinaryExprAST(std::unique_ptr<GenericASTNode> left, std::unique_ptr<GenericASTNode> right, TokenType operation,
                                  SrcLocation startLocation, SrcLocation endLocation)
-        : GenericASTNode(NodeKind::BinaryExprAST, startLocation, endLocation), lhs(std::move(left)), rhs(std::move(right)), operation(operation) {}
+        : GenericASTNode(NodeKind::BinaryExprAST, startLocation, endLocation), m_LHS(std::move(left)), m_RHS(std::move(right)), m_Operation(operation) {}
 
     ProgramAST::ProgramAST(std::vector<std::unique_ptr<GenericASTNode>> expressions, SrcLocation startLocation, SrcLocation endLocation)
-        : GenericASTNode(NodeKind::ProgramAST, startLocation, endLocation), expressions(std::move(expressions)) {}
+        : GenericASTNode(NodeKind::ProgramAST, startLocation, endLocation), m_Expressions(std::move(expressions)) {}
 
-    NodeKind GenericASTNode::getKind() const {
-        return this->kind;
+    NodeKind GenericASTNode::GetKind() const {
+        return m_Kind;
     }
 
-    const SrcLocation& GenericASTNode::getStartLocation() const {
-        return this->startLocation;
+    const SrcLocation& GenericASTNode::GetStartLocation() const {
+        return m_StartLocation;
     }
 
-    const SrcLocation& GenericASTNode::getEndLocation() const {
-        return this->endLocation;
+    const SrcLocation& GenericASTNode::GetEndLocation() const {
+        return m_EndLocation;
     }
 
-    int NumberExprAST::getValue() const {
-        return this->value;
+    int NumberExprAST::GetValue() const {
+        return m_Value;
     }
 
     TokenType UnaryExprAST::getOperation() const {
-        return this->operation;
+        return m_Operation;
     }
 
-    const GenericASTNode* UnaryExprAST::getExpr() const {
-        return this->expr.get();
+    const GenericASTNode* UnaryExprAST::GetExpr() const {
+        return m_Expression.get();
     }
 
-    const GenericASTNode* BinaryExprAST::getLHS() const {
-        return this->lhs.get();
+    const GenericASTNode* BinaryExprAST::GetLHS() const {
+        return m_LHS.get();
     }
 
-    const GenericASTNode* BinaryExprAST::getRHS() const {
-        return this->rhs.get();
+    const GenericASTNode* BinaryExprAST::GetRHS() const {
+        return m_RHS.get();
     }
 
-    TokenType BinaryExprAST::getOperation() const {
-        return this->operation;
+    TokenType BinaryExprAST::GetOperation() const {
+        return m_Operation;
     }
 
-    const std::vector<std::unique_ptr<GenericASTNode>>& ProgramAST::getExpressions() const {
-        return this->expressions;
+    const std::vector<std::unique_ptr<GenericASTNode>>& ProgramAST::GetExpressions() const {
+        return m_Expressions;
     }
 
     ACCEPT_IMPL(ErrorAST)

@@ -1,5 +1,4 @@
-#ifndef DIAGNOSTIC_HPP
-#define DIAGNOSTIC_HPP
+#pragma once
 
 #include <vector>
 
@@ -15,24 +14,22 @@ namespace optiz::fe {
     };
 
     struct Diagnostic {
-        SrcLocation loc;
-        std::string message;
-        DiagnosticLevel level;
+        SrcLocation m_Location;
+        std::string m_Message;
+        DiagnosticLevel m_Level;
 
-        void print() const;
+        void Print() const;
     };
 
     class DiagnosticEngine {
-        std::vector<Diagnostic> reports;
-        bool errorsOccured = false;
+        std::vector<Diagnostic> m_Reports;
+        bool m_ErrorsOccured = false;
 
     public:
-        void report(SrcLocation loc, std::string msg, DiagnosticLevel level);
-        void dump() const;
-        bool hasReports() const;
-        bool hasErrors() const;
+        void Report(SrcLocation loc, std::string msg, DiagnosticLevel level);
+        void Dump() const;
+        bool HasReports() const;
+        bool HasErrors() const;
     };
 
 }  // namespace optiz::fe
-
-#endif  // DIAGNOSTIC_HPP

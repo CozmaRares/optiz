@@ -1,5 +1,4 @@
-#ifndef LEXER_HPP
-#define LEXER_HPP
+#pragma once
 
 #include <ostream>
 #include <string>
@@ -35,35 +34,34 @@ namespace optiz::fe {
     std::ostream& operator<<(std::ostream& out, TokenType type);
 
     struct Token {
-        TokenType type;
-        std::string lexeme;
-        std::pair<SrcLocation, SrcLocation> location;
+        TokenType m_Type;
+        std::string m_Lexeme;
+        SrcLocation m_StartLocation;
+        SrcLocation m_EndLocation;
 
         Token(TokenType type = TokenType::Error);
         Token(TokenType type, std::string lexeme, SrcLocation location);
-        Token(TokenType type, std::string lexeme, SrcLocation locationStart, SrcLocation locationEnd);
+        Token(TokenType type, std::string lexeme, SrcLocation startLocation, SrcLocation endLocation);
 
         friend std::ostream& operator<<(std::ostream& out, const Token& token);
     };
 
     class Lexer {
-        std::string input;
-        uint position;
-        SrcLocation location;
-        char current;
-        DiagnosticEngine& diagnosticEngine;
+        std::string m_Input;
+        uint m_Cursor;
+        SrcLocation m_Location;
+        char m_Current;
+        DiagnosticEngine& m_DiagnosticEngine;
 
     public:
         Lexer(const std::string& input, const std::string& file, DiagnosticEngine& diagnosticEngine);
-        Token nextToken();
+        Token GetNextToken();
 
     private:
-        void advance();
+        void Advance();
 
-        void skipWhitespace();
-        Token tokenizeNumber();
+        void SkipWhitespace();
+        Token TokenizeNumber();
     };
 
 }  // namespace optiz::fe
-
-#endif  // LEXER_HPP

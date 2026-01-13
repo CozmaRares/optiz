@@ -6,31 +6,29 @@
 
 namespace optiz::fe {
 
-    void ASTPrinter::visit(const UnaryExprAST& node) {
-        std::cout << node.getOperation() << " ";
-        node.getExpr()->accept(*this);
+    void ASTPrinter::Visit(const UnaryExprAST& node) {
+        std::cout << node.getOperation() << ' ';
+        node.GetExpr()->accept(*this);
     }
 
-    void ASTPrinter::visit(const BinaryExprAST& node) {
-        std::cout << "(";
-        node.getLHS()->accept(*this);
-        std::cout << ") " << node.getOperation() << " (";
-        node.getRHS()->accept(*this);
-        std::cout << ")";
+    void ASTPrinter::Visit(const BinaryExprAST& node) {
+        node.GetLHS()->accept(*this);
+        std::cout << ' ' << node.GetOperation() << ' ';
+        node.GetRHS()->accept(*this);
     }
 
-    void ASTPrinter::visit(const NumberExprAST& node) {
-        std::cout << node.getValue();
+    void ASTPrinter::Visit(const NumberExprAST& node) {
+        std::cout << node.GetValue();
     }
 
-    void ASTPrinter::visit(const ProgramAST& node) {
-        for (auto& expr : node.getExpressions()) {
+    void ASTPrinter::Visit(const ProgramAST& node) {
+        for (auto& expr : node.GetExpressions()) {
             expr->accept(*this);
             std::cout << "\n";
         }
     }
 
-    void ASTPrinter::visit(const ErrorAST& node) {
+    void ASTPrinter::Visit(const ErrorAST& node) {
         std::cout << "[Error]";
     }
 

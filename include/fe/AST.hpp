@@ -1,5 +1,4 @@
-#ifndef AST_HPP
-#define AST_HPP
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -23,18 +22,18 @@ namespace optiz::fe {
     };
 
     class GenericASTNode {
-        NodeKind kind;
-        SrcLocation startLocation;
-        SrcLocation endLocation;
+        NodeKind m_Kind;
+        SrcLocation m_StartLocation;
+        SrcLocation m_EndLocation;
 
     public:
         GenericASTNode(NodeKind kind, SrcLocation startLocation, SrcLocation endLocation);
         virtual ~GenericASTNode() = default;
 
         virtual void accept(ASTVisitor& visitor) const = 0;
-        NodeKind getKind() const;
-        const SrcLocation& getStartLocation() const;
-        const SrcLocation& getEndLocation() const;
+        NodeKind GetKind() const;
+        const SrcLocation& GetStartLocation() const;
+        const SrcLocation& GetEndLocation() const;
     };
 
     class ErrorAST : public GenericASTNode {
@@ -44,54 +43,52 @@ namespace optiz::fe {
     };
 
     class NumberExprAST : public GenericASTNode {
-        int value;
+        int m_Value;
 
     public:
         NumberExprAST(int value, SrcLocation startLocation, SrcLocation endLocation);
         SHARED_METHODS;
 
-        int getValue() const;
+        int GetValue() const;
     };
 
     class UnaryExprAST : public GenericASTNode {
-        TokenType operation;
-        std::unique_ptr<GenericASTNode> expr;
+        TokenType m_Operation;
+        std::unique_ptr<GenericASTNode> m_Expression;
 
     public:
         UnaryExprAST(TokenType operation, std::unique_ptr<GenericASTNode> expr, SrcLocation startLocation, SrcLocation endLocation);
         SHARED_METHODS;
 
         TokenType getOperation() const;
-        const GenericASTNode* getExpr() const;
+        const GenericASTNode* GetExpr() const;
     };
 
     class BinaryExprAST : public GenericASTNode {
-        std::unique_ptr<GenericASTNode> lhs;
-        std::unique_ptr<GenericASTNode> rhs;
-        TokenType operation;
+        std::unique_ptr<GenericASTNode> m_LHS;
+        std::unique_ptr<GenericASTNode> m_RHS;
+        TokenType m_Operation;
 
     public:
         BinaryExprAST(std::unique_ptr<GenericASTNode> lhs, std::unique_ptr<GenericASTNode> rhs, TokenType operation,
                       SrcLocation startLocation, SrcLocation endLocation);
         SHARED_METHODS;
 
-        const GenericASTNode* getLHS() const;
-        const GenericASTNode* getRHS() const;
-        TokenType getOperation() const;
+        const GenericASTNode* GetLHS() const;
+        const GenericASTNode* GetRHS() const;
+        TokenType GetOperation() const;
     };
 
     class ProgramAST : public GenericASTNode {
-        std::vector<std::unique_ptr<GenericASTNode>> expressions;
+        std::vector<std::unique_ptr<GenericASTNode>> m_Expressions;
 
     public:
         ProgramAST(std::vector<std::unique_ptr<GenericASTNode>> expressions, SrcLocation startLocation, SrcLocation endLocation);
         SHARED_METHODS;
 
-        const std::vector<std::unique_ptr<GenericASTNode>>& getExpressions() const;
+        const std::vector<std::unique_ptr<GenericASTNode>>& GetExpressions() const;
     };
 
 }  // namespace optiz::fe
 
 #undef SHARED_METHODS
-
-#endif  // AST_HPP

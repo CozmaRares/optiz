@@ -4,10 +4,10 @@ namespace optiz::fe {
 
     void SrcLocation::advance(char current) {
         if (current == '\n') {
-            this->line++;
-            this->column = 0;
+            m_Line++;
+            m_Column = 0;
         } else {
-            this->column++;
+            m_Column++;
         }
     }
 

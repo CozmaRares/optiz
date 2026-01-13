@@ -6,32 +6,32 @@
 
 namespace optiz::fe {
 
-    Token::Token(TokenType type) : type(type) {}
+    Token::Token(TokenType type) : m_Type(type) {}
 
     Token::Token(TokenType type, std::string lexeme, SrcLocation location)
-        : type(type), lexeme(lexeme), location(location, location) {}
+        : m_Type(type), m_Lexeme(lexeme), m_StartLocation(location), m_EndLocation(location) {}
 
-    Token::Token(TokenType type, std::string lexeme, SrcLocation locationStart, SrcLocation locationEnd)
-        : type(type), lexeme(lexeme), location(locationStart, locationEnd) {}
+    Token::Token(TokenType type, std::string lexeme, SrcLocation startLocation, SrcLocation endLocation)
+        : m_Type(type), m_Lexeme(lexeme), m_StartLocation(startLocation), m_EndLocation(endLocation) {}
 
     Lexer::Lexer(const std::string& input, const std::string& file, DiagnosticEngine& diagnosticEngine)
-        : input(input), position(0), location(SrcLocation{ .line = 1, .column = 1, .file = file }), current(input[position]), diagnosticEngine(diagnosticEngine) {}
+        : m_Input(input), m_Cursor(0), m_Location(SrcLocation{ 1, 1, file }), m_Current(input[m_Cursor]), m_DiagnosticEngine(diagnosticEngine) {}
 
-    Token Lexer::nextToken() {
-        this->skipWhitespace();
+    Token Lexer::GetNextToken() {
+        SkipWhitespace();
 
-        if (this->current == '\0') {
-            return Token(TokenType::EndOfFile, "", this->location);
+        if (m_Current == '\0') {
+            return Token(TokenType::EndOfFile, "", m_Location);
         }
 
-        if (std::isdigit(this->current)) {
-            return this->tokenizeNumber();
+        if (std::isdigit(m_Current)) {
+            return TokenizeNumber();
         }
 
         TokenType type = TokenType::EndOfFile;
 
         // 1-wide tokens
-        switch (this->current) {
+        switch (m_Current) {
             case '+':
                 type = TokenType::Plus;
                 break;
@@ -58,52 +58,52 @@ namespace optiz::fe {
         }
 
         if (type != TokenType::EndOfFile) {
-            char current      = this->current;
-            SrcLocation start = this->location;
-            this->advance();
-            return Token(type, std::string(1, current), start, this->location);
+            char current      = m_Current;
+            SrcLocation start = m_Location;
+            Advance();
+            return Token(type, std::string(1, current), start, m_Location);
         }
 
-        this->diagnosticEngine.report(this->location, std::string("Unexpected character: ") + this->current, DiagnosticLevel::Error);
-        this->advance();
+        m_DiagnosticEngine.Report(m_Location, std::string("Unexpected character: ") + m_Current, DiagnosticLevel::Error);
+        Advance();
         return Token(TokenType::Error);
     }
 
-    void Lexer::advance() {
-        this->position++;
-        this->location.advance(this->current);
-        this->current = this->input[this->position];
+    void Lexer::Advance() {
+        m_Cursor++;
+        m_Location.advance(m_Current);
+        m_Current = m_Input[m_Cursor];
     }
 
-    void Lexer::skipWhitespace() {
-        while (std::isspace(this->current)) {
-            this->advance();
+    void Lexer::SkipWhitespace() {
+        while (std::isspace(m_Current)) {
+            Advance();
         }
     }
 
-    Token Lexer::tokenizeNumber() {
+    Token Lexer::TokenizeNumber() {
         std::string lexeme        = "";
-        SrcLocation locationStart = this->location;
+        SrcLocation locationStart = m_Location;
 
-        while (std::isdigit(this->current)) {
-            lexeme += this->current;
-            this->advance();
+        while (std::isdigit(m_Current)) {
+            lexeme += m_Current;
+            Advance();
         }
 
-        if (this->current != '.') {
+        if (m_Current != '.') {
             goto end;
         }
 
-        lexeme += this->current;
-        advance();
+        lexeme += m_Current;
+        Advance();
 
-        while (std::isdigit(this->current)) {
-            lexeme += this->current;
-            this->advance();
+        while (std::isdigit(m_Current)) {
+            lexeme += m_Current;
+            Advance();
         }
 
     end:
-        return Token(TokenType::Number, lexeme, locationStart, this->location);
+        return Token(TokenType::Number, lexeme, locationStart, m_Location);
     }
 
     std::ostream& operator<<(std::ostream& out, TokenType type) {
@@ -135,13 +135,13 @@ namespace optiz::fe {
     }
 
     std::ostream& operator<<(std::ostream& out, const SrcLocation& loc) {
-        out << "SrcLoc { line = " << loc.line << ", col = " << loc.column << ", file = " << loc.file << " }";
+        out << "SrcLoc { line = " << loc.m_Line << ", col = " << loc.m_Column << ", file = " << loc.m_File << " }";
         return out;
     }
 
     std::ostream& operator<<(std::ostream& out, const Token& token) {
-        out << "Token { type = " << token.type << ", value = " << token.lexeme << ", loc = {"
-            << token.location.first << ", " << token.location.second << "} }";
+        out << "Token { type = " << token.m_Type << ", value = " << token.m_Lexeme << ", loc = {"
+            << token.m_StartLocation << ", " << token.m_EndLocation << "} }";
         return out;
     }
 

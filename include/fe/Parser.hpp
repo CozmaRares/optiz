@@ -1,5 +1,4 @@
-#ifndef PARSER_HPP
-#define PARSER_HPP
+#pragma once
 
 #include "fe/AST.hpp"
 #include "fe/Diagnostic.hpp"
@@ -8,26 +7,24 @@
 namespace optiz::fe {
 
     class Parser {
-        DiagnosticEngine& diagnosticEngine;
-        Lexer lexer;
-        Token currentToken;
-        bool panicMode;
+        DiagnosticEngine& m_DiagnosticEngine;
+        Lexer m_Lexer;
+        Token m_CurrentToken;
+        bool m_PanicModeEnabled;
 
     public:
         Parser(const std::string& input, const std::string& file, DiagnosticEngine& diagnosticEngine);
-        std::unique_ptr<GenericASTNode> parseProgram();
+        std::unique_ptr<GenericASTNode> ParseProgram();
 
     private:
-        std::unique_ptr<GenericASTNode> parseExpression();
-        std::unique_ptr<GenericASTNode> parseUnary();
-        std::unique_ptr<GenericASTNode> parseBinOpRHS(std::unique_ptr<GenericASTNode> lhs, int operatorPrecedence);
-        std::unique_ptr<GenericASTNode> parsePrimary();
+        std::unique_ptr<GenericASTNode> ParseExpression();
+        std::unique_ptr<GenericASTNode> ParseUnary();
+        std::unique_ptr<GenericASTNode> ParseBinOpRHS(std::unique_ptr<GenericASTNode> lhs, int operatorPrecedence);
+        std::unique_ptr<GenericASTNode> ParsePrimary();
 
-        void advance();
-        void synchronize();
-        void reportError(SrcLocation loc, std::string msg);
+        void Advance();
+        void Synchronize();
+        void ReportError(SrcLocation loc, std::string msg);
     };
 
 }  // namespace optiz::fe
-
-#endif  // PARSER_HPP

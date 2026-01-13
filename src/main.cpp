@@ -8,15 +8,15 @@ using namespace optiz::fe;
 int main() {
     DiagnosticEngine TheDiagnosticEngine;
     Parser parser("* 1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
-    std::unique_ptr<GenericASTNode> ast = parser.parseProgram();
+    std::unique_ptr<GenericASTNode> ast = parser.ParseProgram();
 
     ASTPrinter printer;
     ast->accept(printer);
 
-    if (TheDiagnosticEngine.hasReports()) {
-        TheDiagnosticEngine.dump();
+    if (TheDiagnosticEngine.HasReports()) {
+        TheDiagnosticEngine.Dump();
 
-        if (TheDiagnosticEngine.hasErrors()) {
+        if (TheDiagnosticEngine.HasErrors()) {
             return 1;
         }
     }
