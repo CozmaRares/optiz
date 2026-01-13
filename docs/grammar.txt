@@ -1,4 +1,4 @@
-PROGRAM ::= (STATEMENT | FUNCTION | STRUCT)*
+PROGRAM ::= (STATEMENT | FUNCTION | STRUCT | ANNOTATION_DEF)*
 
 STATEMENT ::=
     | ASSIGNMENT ';'
@@ -14,54 +14,51 @@ EXPRESSION ::=
 BINARY_EXPR ::= UNARY (BIN_OPERATOR UNARY)*
 BIN_OPERATOR ::=
     | '==' | '!=' | '<' | '<=' | '>' | '>=' # Comparison
-    | '&&' | '||' | ''                      # Logical
+    | '&&' | '||'                           # Logical
     | '+' | '-' | '*' | '/' | '%'           # Arithmetic
     | '<<' | '>>' | '&' | '|' | '^'         # Bitwise
 
-UNARY ::= UN_OPERATOR UNARY | PRIMARY
+UNARY ::= UN_OPERATOR UNARY | PRIMARY_EXPRESSION
 UN_OPERATOR ::= 
     | '+' | '-' | '!' # Arithmetic
     | '~'             # Bitwise
     | '*' | '&'       # Pointer
 
-PRIMARY ::=
-    | number | 'true' | 'false' | CHAR | STRING
-    | ARRAY_LITERAL
-    | IDENTIFIER SUFFIX?
+PRIMARY_EXPRESSION ::=
+    | <number> | 'true' | 'false' | <char> | <string>
+    | '[' (EXPRESSION (',' EXPRESSION)*)? ']' # Array Literal
+    | <identifier> SUFFIX?
     | '(' EXPRESSION ')'
-
-ARRAY_LITERAL ::= '[' (EXPRESSION (',' EXPRESSION)*)? ']'
 
 SUFFIX ::=
     | '(' (EXPRESSION (',' EXPRESSION)*)? ')' SUFFIX # Funcion Call
     | '[' EXPRESSION ']' SUFFIX                      # Array Access
-    | '.' IDENTIFIER SUFFIX                          # Member
+    | '.' <identifier> SUFFIX                        # Member
     | '=' EXPRESSION                                 # REASSIGNMENT
+    | ε                                              # NONE
 
-ANNOTATION ::= '@' ( ANNOTATION_MULTI | ANNOTATION_BASE )
-ANNOTATION_MULTI ::= 'multi' '(' ANNOTATION_BASE (',' ANNOTATION_BASE)* ')'
-ANNOTATION_BASE  ::= IDENTIFIER ('=' EXPRESSION)?
+ANNOTATION ::= ANNOTATION_MULTI | ANNOTATION_USE
+ANNOTATION_MULTI ::= '@opti' ANNOTATION_REPEATED
+ANNOTATION_USE   ::= '@use' <identifier>
+
+ANNOTATION_REPEATED ::= '(' ANNOTATION_BASE (',' ANNOTATION_BASE)* ')'
+ANNOTATION_BASE  ::= <identifier> ('=' '{' <tokens> '}')?
 
 SCOPE ::= ANNOTATION? '{' STATEMENT* 'return' EXPRESSION '}'
 
 TYPE_DEFINITION ::= ':' TYPE
 TYPE ::=
-    | IDENTIFIER
-    | '[' TYPE (';' number)? ']'
+    | <identifier>
+    | '[' TYPE (';' <number>)? ']'
     | '*' TYPE
 
-IF ::= 'if' EXPRESSION 'then' SCOPE ('else' (IF | SCOPE))?
+IF ::= ( '@likely' '(' 'true' | 'false' ')' )? 'if' EXPRESSION 'then' SCOPE ('else' (IF | SCOPE))?
 
 WHILE ::= 'while' EXPRESSION 'do' SCOPE
 
-FUNCTION ::= 'fn' IDENTIFIER '(' PARAMS? ')' TYPE_DEFINITION SCOPE
-PARAMS ::= IDENTIFIER TYPE_DEFINITION (',' IDENTIFIER TYPE_DEFINITION)*
+FUNCTION ::= 'fn' <identifier> '(' PARAMS? ')' TYPE_DEFINITION SCOPE
+PARAMS ::= <identifier> TYPE_DEFINITION (',' <identifier> TYPE_DEFINITION)*
 
-STRUCT ::= 'struct' IDENTIFIER '{' (IDENTIFIER TYPE_DEFINITION)* '}'
+STRUCT ::= 'struct' <identifier> '{' (<identifier> TYPE_DEFINITION)* '}'
 
-CHAR ::= '\'' char '\''
-STRING ::= '"' char* '"'
-LITERAL ::= number | 'true' | 'false' | CHAR | STRING
-
-number ::= \d+ # any Unicode digit
-char ::= \u{0000}-\u{0x10FFFF} # any Unicode character
+ANNOTATION_DEF ::= '@profile' ANNOTATION_REPEATED

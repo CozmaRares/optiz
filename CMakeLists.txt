@@ -32,11 +32,11 @@ endif()
 
 add_executable(optiz
     src/main.cpp 
-    src/fe/AST.cpp
-    src/fe/ASTPrinter.cpp
+    # src/fe/AST.cpp
+    # src/fe/ASTPrinter.cpp
     src/fe/Diagnostic.cpp
     src/fe/Lexer.cpp
-    src/fe/Parser.cpp
+    # src/fe/Parser.cpp
     src/fe/SrcLocation.cpp
 )
 

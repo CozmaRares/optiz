@@ -11,24 +11,72 @@ namespace optiz::fe {
     enum class TokenType {
         // PRIMITIVES
         Number,
+        Char,
+        String,
+        Identifier,
 
         // OPERATORS
-        Plus,
-        Minus,
-        Star,
-        Slash,
+        Equals,        // =
+        EqualsEquals,  // ==
+
+        Bang,        // !
+        BangEquals,  // !=
+
+        Less,        // <
+        LessEquals,  // <=
+        ShiftLeft,   // <<
+
+        Greater,        // >
+        GreaterEquals,  // >=
+        ShiftRight,     // >>
+
+        Amp,  // &
+        And,  // &&
+
+        BitOr,  // |
+        Or,     // ||
+
+        Plus,     // +
+        Minus,    // -
+        Star,     // *
+        Slash,    // /
+        Percent,  // %
+        Caret,    // ^
+        Tilde,    // ~
 
         // SYNTAX
-        LParen,
-        RParen,
-
-        // KEYWORDS
+        LParen,   // (
+        RParen,   // )
+        LSquare,  // [
+        RSquare,  // ]
+        LCurly,   // {
+        RCurly,   // }
 
         // DELIMITERS
-        SemiColon,
-        EndOfFile,
+        Comma,      // ,
+        Dot,        // .
+        Colon,      // :
+        SemiColon,  // ;
 
+        // KEYWORDS
+        True,
+        False,
+        AtOpti,
+        AtUse,
+        Return,
+        AtLikely,
+        AtProfile,
+        If,
+        Then,
+        Else,
+        While,
+        Do,
+        Fn,
+        Struct,
+
+        // SPECIAL
         Error,
+        EndOfFile,
     };
 
     std::ostream& operator<<(std::ostream& out, TokenType type);
@@ -42,6 +90,8 @@ namespace optiz::fe {
         Token(TokenType type = TokenType::Error);
         Token(TokenType type, std::string lexeme, SrcLocation location);
         Token(TokenType type, std::string lexeme, SrcLocation startLocation, SrcLocation endLocation);
+
+        bool operator==(const TokenType& type) const;
 
         friend std::ostream& operator<<(std::ostream& out, const Token& token);
     };
@@ -61,7 +111,11 @@ namespace optiz::fe {
         void Advance();
 
         void SkipWhitespace();
+
         Token TokenizeNumber();
+        Token TokenizeChar();
+        Token TokenizeString();
+        Token TokenizeIdentifierOrKeyword();
     };
 
 }  // namespace optiz::fe

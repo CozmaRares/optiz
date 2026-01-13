@@ -1,17 +1,28 @@
-#include "fe/AST.hpp"
-#include "fe/ASTPrinter.hpp"
+#include <iostream>
+
+#include "fe/Lexer.hpp"
+// #include "fe/AST.hpp"
+// #include "fe/ASTPrinter.hpp"
 #include "fe/Diagnostic.hpp"
-#include "fe/Parser.hpp"
+// #include "fe/Parser.hpp"
 
 using namespace optiz::fe;
 
 int main() {
     DiagnosticEngine TheDiagnosticEngine;
-    Parser parser("* 1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
-    std::unique_ptr<GenericASTNode> ast = parser.ParseProgram();
+    Lexer lexer("'1'", "main.optiz", TheDiagnosticEngine);
+    // Parser parser("* 1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
+    // std::unique_ptr<GenericASTNode> ast = parser.ParseProgram();
 
-    ASTPrinter printer;
-    ast->accept(printer);
+    // ASTPrinter printer;
+    // ast->accept(printer);
+
+    Token token;
+
+    do {
+        token = lexer.GetNextToken();
+        std::cout << token << std::endl;
+    } while (token != TokenType::EndOfFile);
 
     if (TheDiagnosticEngine.HasReports()) {
         TheDiagnosticEngine.Dump();
