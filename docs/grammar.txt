@@ -1,11 +1,10 @@
-PROGRAM ::= (STATEMENT | FUNCTION | STRUCT | ANNOTATION_DEF)*
+PROGRAM ::= (STATEMENT | FUNCTION | STRUCT | ANNOTATION_DEF | IMPORT)*
 
 STATEMENT ::=
-    | ASSIGNMENT ';'
-    | MUTABLE_ASSIGNMENT ';'
+    | ASSIGNMENT
     | IF
     | WHILE
-    | EXPRESSION ';
+    | EXPRESSION ';'
 
 EXPRESSION ::=
     | BINARY_EXPR
@@ -34,17 +33,21 @@ SUFFIX ::=
     | '(' (EXPRESSION (',' EXPRESSION)*)? ')' SUFFIX # Funcion Call
     | '[' EXPRESSION ']' SUFFIX                      # Array Access
     | '.' <identifier> SUFFIX                        # Member
-    | '=' EXPRESSION                                 # REASSIGNMENT
+    | ASSIGNMENT_SUFFIX
     | ε                                              # NONE
 
+ASSIGNMENT ::= 'let' 'mut'? <identifier> TYPE_DEFINITION ASSIGNMENT_SUFFIX ';'
+ASSIGNMENT_SUFFIX = '=' (SCOPE | EXPRESSION)
+
 ANNOTATION ::= ANNOTATION_MULTI | ANNOTATION_USE
-ANNOTATION_MULTI ::= '@opti' ANNOTATION_REPEATED
+ANNOTATION_MULTI ::= '@optiz' ANNOTATION_REPEATED
 ANNOTATION_USE   ::= '@use' <identifier>
+CONTRACT ::= '@contract' ANNOTATION_REPEATED
 
 ANNOTATION_REPEATED ::= '(' ANNOTATION_BASE (',' ANNOTATION_BASE)* ')'
-ANNOTATION_BASE  ::= <identifier> ('=' '{' <tokens> '}')?
+ANNOTATION_BASE  ::= <identifier> ('=' ( EXPRESSION | '{' <tokens> '}' ))?              # <tokens> accepts all language tokens, but curly braces
 
-SCOPE ::= ANNOTATION? '{' STATEMENT* 'return' EXPRESSION '}'
+SCOPE ::= ANNOTATION? CONTRACT? '{' (STATEMENT ';')* EXPRESSION? '}'
 
 TYPE_DEFINITION ::= ':' TYPE
 TYPE ::=
@@ -52,7 +55,7 @@ TYPE ::=
     | '[' TYPE (';' <number>)? ']'
     | '*' TYPE
 
-IF ::= ( '@likely' '(' 'true' | 'false' ')' )? 'if' EXPRESSION 'then' SCOPE ('else' (IF | SCOPE))?
+IF ::= 'if' EXPRESSION SCOPE 'then' ('else' (IF | SCOPE))?
 
 WHILE ::= 'while' EXPRESSION 'do' SCOPE
 
@@ -62,3 +65,5 @@ PARAMS ::= <identifier> TYPE_DEFINITION (',' <identifier> TYPE_DEFINITION)*
 STRUCT ::= 'struct' <identifier> '{' (<identifier> TYPE_DEFINITION)* '}'
 
 ANNOTATION_DEF ::= '@profile' ANNOTATION_REPEATED
+
+IMPORT ::= 'import' <string>
