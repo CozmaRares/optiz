@@ -12,7 +12,7 @@ int main() {
     DiagnosticEngine TheDiagnosticEngine;
     Lexer lexer("'1'", "main.optiz", TheDiagnosticEngine);
     // Parser parser("* 1 + 2 * 3 * 4;", "main.optiz", TheDiagnosticEngine);
-    // std::unique_ptr<GenericASTNode> ast = parser.ParseProgram();
+    // als::Box<GenericASTNode> ast = parser.ParseProgram();
 
     // ASTPrinter printer;
     // ast->accept(printer);
@@ -21,7 +21,7 @@ int main() {
 
     do {
         token = lexer.GetNextToken();
-        std::cout << token << std::endl;
+        als::Print << token << "";
     } while (token != TokenType::EndOfFile);
 
     if (TheDiagnosticEngine.HasReports()) {

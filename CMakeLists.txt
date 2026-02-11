@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(optiz VERSION 1.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_program(CCACHE_PROGRAM ccache)
@@ -30,15 +30,12 @@ if(HAS_LLD)
     message(STATUS "Using LLD linker")
 endif()
 
-add_executable(optiz
-    src/main.cpp 
-    # src/fe/AST.cpp
-    # src/fe/ASTPrinter.cpp
-    src/fe/Diagnostic.cpp
-    src/fe/Lexer.cpp
-    # src/fe/Parser.cpp
-    src/fe/SrcLocation.cpp
+file(GLOB_RECURSE ALL_SRCS CONFIGURE_DEPENDS 
+    "src/*.cpp" 
+    "include/*.hpp"
 )
+
+add_executable(optiz ${ALL_SRCS})
 
 target_include_directories(optiz PRIVATE
     include 

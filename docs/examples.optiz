@@ -1,4 +1,6 @@
-@profile(name = "EngineCore", pipeline = { depth=4, mode=aggressive })
+import "std/memory"
+
+@profile(name = "EngineCore", pipeline = { depth = 4, mode = aggressive })
 
 fn process_data(ptr: *[int]) : int
 @contract(nonnull = { ptr })
@@ -17,8 +19,6 @@ fn process_data(ptr: *[int]) : int
 
     0
 }
-
-import "std/memory"
 
 fn memory_copy(dest: *[int; 1024], src: *[int; 1024], count: int) : void
 @contract(noalias = { src, dest })

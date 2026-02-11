@@ -1,12 +1,11 @@
 #include "fe/Lexer.hpp"
 
-#include <unordered_map>
-
 #include "fe/Diagnostic.hpp"
+#include "utils/aliases.hpp"
 
 using optiz::fe::TokenType;
 
-static std::unordered_map<std::string, TokenType> s_KeywordMap = {
+static als::Map<als::String, TokenType> s_KeywordMap = {
     { "true", TokenType::True },
     { "false", TokenType::False },
     { "@opti", TokenType::AtOpti },
@@ -32,17 +31,6 @@ char getEscapedChar(char c);
 
 namespace optiz::fe {
 
-    Token::Token(TokenType type) : m_Type(type) {}
-
-    Token::Token(TokenType type, std::string lexeme, SrcLocation location)
-        : m_Type(type), m_Lexeme(lexeme), m_StartLocation(location), m_EndLocation(location) {}
-
-    Token::Token(TokenType type, std::string lexeme, SrcLocation startLocation, SrcLocation endLocation)
-        : m_Type(type), m_Lexeme(lexeme), m_StartLocation(startLocation), m_EndLocation(endLocation) {}
-
-    Lexer::Lexer(const std::string& input, const std::string& file, DiagnosticEngine& diagnosticEngine)
-        : m_Input(input), m_Cursor(0), m_Location(SrcLocation{ 1, 1, file }), m_Current(input[m_Cursor]), m_DiagnosticEngine(diagnosticEngine) {}
-
     Token Lexer::GetNextToken() {
         SkipWhitespace();
 
@@ -50,7 +38,7 @@ namespace optiz::fe {
             return Token(TokenType::EndOfFile, "", m_Location);
         }
 
-        if (std::isdigit(m_Current)) {
+        if (als::IsNumeric(m_Current)) {
             return TokenizeNumber();
         }
 
@@ -70,7 +58,7 @@ namespace optiz::fe {
 
         if (type != TokenType::Error) {
             SrcLocation start = m_Location;
-            std::string lexeme(1, m_Current);
+            als::String lexeme(1, m_Current);
             Advance();
             TokenType maybeTwoCharType = getPossiblyTwoCharToken(type, m_Current);
 
@@ -84,7 +72,7 @@ namespace optiz::fe {
             return Token(type, lexeme, start, m_Location);
         }
 
-        m_DiagnosticEngine.Report(m_Location, std::string("Unexpected character: ") + m_Current, DiagnosticLevel::Error);
+        m_DiagnosticEngine.Report(m_Location, als::String("Unexpected character: ") + m_Current, DiagnosticLevel::Error);
         Advance();
         return Token(TokenType::Error);
     }
@@ -101,16 +89,16 @@ namespace optiz::fe {
     }
 
     void Lexer::SkipWhitespace() {
-        while (std::isspace(m_Current)) {
+        while (als::IsSpace(m_Current)) {
             Advance();
         }
     }
 
     Token Lexer::TokenizeNumber() {
-        std::string lexeme        = "";
+        als::String lexeme        = "";
         SrcLocation locationStart = m_Location;
 
-        while (std::isdigit(m_Current)) {
+        while (als::IsNumeric(m_Current)) {
             lexeme += m_Current;
             Advance();
         }
@@ -122,7 +110,7 @@ namespace optiz::fe {
         lexeme += m_Current;
         Advance();
 
-        while (std::isdigit(m_Current)) {
+        while (als::IsNumeric(m_Current)) {
             lexeme += m_Current;
             Advance();
         }
@@ -148,10 +136,10 @@ namespace optiz::fe {
 
         if (m_Current == '\'') {
             Advance();
-            return Token(TokenType::Char, std::string(1, c), start, m_Location);
+            return Token(TokenType::Char, als::String(1, c), start, m_Location);
         }
 
-        m_DiagnosticEngine.Report(m_Location, std::string("Expected apostrophe (\')"), DiagnosticLevel::Error);
+        m_DiagnosticEngine.Report(m_Location, als::String("Expected apostrophe (\')"), DiagnosticLevel::Error);
         return Token(TokenType::Error);
     }
 
@@ -160,7 +148,7 @@ namespace optiz::fe {
         Advance();
 
         bool escaped = false;
-        std::string lexeme;
+        als::String lexeme;
 
         while (m_Current != '\0' && (m_Current != '"' || escaped)) {
             if (escaped) {
@@ -179,12 +167,12 @@ namespace optiz::fe {
             return Token(TokenType::String, lexeme, start, m_Location);
         }
 
-        m_DiagnosticEngine.Report(m_Location, std::string("Expected quote (\")"), DiagnosticLevel::Error);
+        m_DiagnosticEngine.Report(m_Location, als::String("Expected quote (\")"), DiagnosticLevel::Error);
         return Token(TokenType::Error);
     }
 
     Token Lexer::TokenizeIdentifierOrKeyword() {
-        std::string lexeme;
+        als::String lexeme;
         SrcLocation start = m_Location;
 
         while (isIdentifierChar(m_Current)) {
@@ -204,11 +192,7 @@ namespace optiz::fe {
         return Token(type, lexeme, start, m_Location);
     }
 
-    bool Token::operator==(const TokenType& type) const {
-        return m_Type == type;
-    }
-
-    std::ostream& operator<<(std::ostream& out, TokenType type) {
+    als::OutStream& operator<<(als::OutStream& out, TokenType type) {
         switch (type) {
             case TokenType::Number:
                 return out << "NUMBER";
@@ -319,14 +303,8 @@ namespace optiz::fe {
         return out << "UNKNOWN(" << static_cast<int>(type) << ')';
     }
 
-    std::ostream& operator<<(std::ostream& out, const SrcLocation& loc) {
-        out << "SrcLoc { line = " << loc.m_Line << ", col = " << loc.m_Column << ", file = " << loc.m_File << " }";
-        return out;
-    }
-
-    std::ostream& operator<<(std::ostream& out, const Token& token) {
-        out << "Token { type = " << token.m_Type << ", value = " << token.m_Lexeme << ", loc = {"
-            << token.m_StartLocation << ", " << token.m_EndLocation << "} }";
+    als::OutStream& operator<<(als::OutStream& out, const Token& token) {
+        als::Print(out, "Token { type = ", token.m_Type, ", value = ", token.m_Lexeme, ", span = ", token.m_Span, " }");
         return out;
     }
 
@@ -423,9 +401,9 @@ char getEscapedChar(char c) {
 }
 
 bool isIdentifierStart(char c) {
-    return std::isalpha(c) || c == '_';
+    return als::IsAlpha(c) || c == '_';
 }
 
 bool isIdentifierChar(char c) {
-    return std::isalnum(c) || c == '_';
+    return als::IsAlphaNumeric(c) || c == '_';
 }

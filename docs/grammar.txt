@@ -1,16 +1,25 @@
-PROGRAM ::= (STATEMENT | FUNCTION | STRUCT | ANNOTATION_DEF | IMPORT)*
+PROGRAM ::= LANGUAGE_CONSTRUCT*
+LANGUAGE_CONSTRUCT ::= FUNCTION | STRUCT | ANNOTATION_PROFILE | IMPORT | STATEMENT 
 
 STATEMENT ::=
     | ASSIGNMENT
-    | IF
-    | WHILE
-    | EXPRESSION ';'
+    | EXPRESSION
+
+ASSIGNMENT ::= 'let' 'mut'? <identifier> TYPE ASSIGNMENT_SUFFIX ';'
+TYPE = ':' TYPE_BASE
+TYPE_BASE ::=
+    | <identifier>
+    | '*' TYPE_BASE 
+    | '[' TYPE_BASE (';' <number>)? ']'
 
 EXPRESSION ::=
-    | BINARY_EXPR
+    | BINARY_EXPR ';'
+    | IF
+    | WHILE
     | SCOPE
 
-BINARY_EXPR ::= UNARY (BIN_OPERATOR UNARY)*
+BINARY_EXPR ::= UNARY BINARY_EXPR_RHS
+BINARY_EXPR_RHS ::= (BIN_OPERATOR UNARY)*
 BIN_OPERATOR ::=
     | '==' | '!=' | '<' | '<=' | '>' | '>=' # Comparison
     | '&&' | '||'                           # Logical
@@ -23,47 +32,37 @@ UN_OPERATOR ::=
     | '~'             # Bitwise
     | '*' | '&'       # Pointer
 
-PRIMARY_EXPRESSION ::=
+PRIMARY_EXPRESSION ::= PRIMARY_EXPRESSION_BASE ( CALL_SUFFIX | INDEX_SUFFIX | MEMBER_SUFFIX )* ASSIGNMENT_SUFFIX?
+PRIMARY_EXPRESSION_BASE ::=
     | <number> | 'true' | 'false' | <char> | <string>
     | '[' (EXPRESSION (',' EXPRESSION)*)? ']' # Array Literal
-    | <identifier> SUFFIX?
+    | <identifier>
     | '(' EXPRESSION ')'
 
-SUFFIX ::=
-    | '(' (EXPRESSION (',' EXPRESSION)*)? ')' SUFFIX # Funcion Call
-    | '[' EXPRESSION ']' SUFFIX                      # Array Access
-    | '.' <identifier> SUFFIX                        # Member
-    | ASSIGNMENT_SUFFIX
-    | ε                                              # NONE
-
-ASSIGNMENT ::= 'let' 'mut'? <identifier> TYPE_DEFINITION ASSIGNMENT_SUFFIX ';'
+CALL_SUFFIX   ::= '(' (EXPRESSION (',' EXPRESSION)*)? ')'
+INDEX_SUFFIX  ::= '[' EXPRESSION ']'
+MEMBER_SUFFIX ::= '.' <identifier>
 ASSIGNMENT_SUFFIX = '=' (SCOPE | EXPRESSION)
 
-ANNOTATION ::= ANNOTATION_MULTI | ANNOTATION_USE
-ANNOTATION_MULTI ::= '@optiz' ANNOTATION_REPEATED
-ANNOTATION_USE   ::= '@use' <identifier>
-CONTRACT ::= '@contract' ANNOTATION_REPEATED
+ANNOTATION ::= ANNOTATION_OPTIZ | ANNOTATION_USE
+ANNOTATION_OPTIZ ::= '@optiz' '(' ANNOTATION_REPEATED ')'
+ANNOTATION_USE   ::= '@use' '(' <string>+ ')'
+CONTRACT ::= '@contract' '(' ANNOTATION_REPEATED ')'
 
-ANNOTATION_REPEATED ::= '(' ANNOTATION_BASE (',' ANNOTATION_BASE)* ')'
-ANNOTATION_BASE  ::= <identifier> ('=' ( EXPRESSION | '{' <tokens> '}' ))?              # <tokens> accepts all language tokens, but curly braces
+ANNOTATION_REPEATED ::= ANNOTATION_BASE (',' ANNOTATION_BASE)*
+ANNOTATION_BASE  ::= <identifier> '=' ( <token> | '{' <token>+ '}' )  # <token> accepts all language tokens, except curly braces
 
-SCOPE ::= ANNOTATION? CONTRACT? '{' (STATEMENT ';')* EXPRESSION? '}'
+SCOPE ::= ANNOTATION* CONTRACT? '{' STATEMENT* EXPRESSION? '}'
 
-TYPE_DEFINITION ::= ':' TYPE
-TYPE ::=
-    | <identifier>
-    | '[' TYPE (';' <number>)? ']'
-    | '*' TYPE
-
-IF ::= 'if' EXPRESSION SCOPE 'then' ('else' (IF | SCOPE))?
+IF ::= 'if' EXPRESSION 'then' SCOPE ('else' (IF | SCOPE))?
 
 WHILE ::= 'while' EXPRESSION 'do' SCOPE
 
-FUNCTION ::= 'fn' <identifier> '(' PARAMS? ')' TYPE_DEFINITION SCOPE
-PARAMS ::= <identifier> TYPE_DEFINITION (',' <identifier> TYPE_DEFINITION)*
+FUNCTION ::= 'fn' <identifier> '(' PARAMS? ')' TYPE SCOPE
+PARAMS ::= <identifier> TYPE (',' <identifier> TYPE)*
 
-STRUCT ::= 'struct' <identifier> '{' (<identifier> TYPE_DEFINITION)* '}'
+STRUCT ::= 'struct' <identifier> '{' (<identifier> TYPE)* '}'
 
-ANNOTATION_DEF ::= '@profile' ANNOTATION_REPEATED
+ANNOTATION_PROFILE ::= '@profile' '(' name '=' <string> ',' ANNOTATION_REPEATED ')'
 
 IMPORT ::= 'import' <string>
