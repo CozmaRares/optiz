@@ -1,16 +1,21 @@
 #include <iostream>
+#include <iterator>
+#include <sstream>
+#include <string>
 
 #include "ast_printer.hpp"
 #include "parser.hpp"
 
 int main() {
-    Lexer lexer;
+    const std::string source(std::istreambuf_iterator<char>{ std::cin }, {});
+    std::istringstream input(source);
+    Lexer lexer(&input);
     Parser parser(lexer);
 
     auto expression = parser.Parse();
 
     if (!expression) {
-        std::cerr << "Parse error: " << expression.error().message << '\n';
+        expression.error()->Print(source);
         return 1;
     }
 

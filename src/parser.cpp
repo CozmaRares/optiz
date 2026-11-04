@@ -1,5 +1,8 @@
 #include "parser.hpp"
 
+#include <algorithm>
+#include <initializer_list>
+
 #define TRY_ADVANCE() \
     if (auto result = Advance(); !result) return result;
 
@@ -7,12 +10,22 @@
     auto var = (expression);       \
     if (!var) return var
 
+namespace {
+    inline bool Matches(int type, std::initializer_list<int> types) {
+        return std::ranges::find(types, type) != types.end();
+    }
+
+    inline bool NotMatches(int type, std::initializer_list<int> types) {
+        return !Matches(type, types);
+    }
+}  // namespace
+
 ParseResult Parser::Parse() {
     TRY_ADVANCE();
 
     TRY_PARSE(expression, Expression());
 
-    if (token.type != Token::End) return Fail("Expected end of input");
+    if (NotMatches(token.type, { Token::End })) return Fail("Expected end of input");
 
     return expression;
 }
@@ -21,13 +34,12 @@ ParseResult Parser::Parse() {
 ParseResult Parser::Expression() {
     TRY_PARSE(left, Term());
 
-    const int type = token.type;
-    if (type != '+' && type != '-') return left;
+    const auto op = token;
+    if (NotMatches(op.type, { '+', '-' })) return left;
     TRY_ADVANCE();
 
     TRY_PARSE(right, Expression());
 
-    const auto op = type == '+' ? ast::BinaryOperator::Add : ast::BinaryOperator::Subtract;
     return std::make_unique<ast::Binary>(op, std::move(*left), std::move(*right));
 }
 
@@ -35,13 +47,12 @@ ParseResult Parser::Expression() {
 ParseResult Parser::Term() {
     TRY_PARSE(left, Factor());
 
-    const int type = token.type;
-    if (type != '*' && type != '/') return left;
+    const auto op = token;
+    if (NotMatches(op.type, { '*', '/' })) return left;
     TRY_ADVANCE();
 
     TRY_PARSE(right, Term());
 
-    const auto op = type == '*' ? ast::BinaryOperator::Multiply : ast::BinaryOperator::Divide;
     return std::make_unique<ast::Binary>(op, std::move(*left), std::move(*right));
 }
 
@@ -49,17 +60,15 @@ ParseResult Parser::Term() {
 ParseResult Parser::Factor() {
     switch (token.type) {
         case Token::Integer: {
-            int v = token.value.integer_value;
+            auto expression = std::make_unique<ast::Integer>(token);
             TRY_ADVANCE();
 
-            auto expression = std::make_unique<ast::Integer>(v);
             return expression;
         }
         case Token::Float: {
-            double v = token.value.float_value;
+            auto expression = std::make_unique<ast::Float>(token);
             TRY_ADVANCE();
 
-            auto expression = std::make_unique<ast::Float>(v);
             return expression;
         }
         case '(': {
@@ -67,7 +76,7 @@ ParseResult Parser::Factor() {
 
             TRY_PARSE(expression, Expression());
 
-            if (token.type != ')') return Fail("Expected ')'");
+            if (NotMatches(token.type, { ')' })) return Fail("Expected '{}'", ')');
             TRY_ADVANCE();
 
             return expression;
@@ -76,13 +85,9 @@ ParseResult Parser::Factor() {
     }
 }
 
-ParseResult Parser::Fail(const char* message) {
-    return std::unexpected(ParseError{ message });
-}
-
 ParseResult Parser::Advance() {
     auto result = lexer.NextToken();
-    if (!result) return Fail(result.error().message);
+    if (!result) return std::unexpected(std::make_unique<LexError>(std::move(result.error())));
     token = *result;
     return ast::ExpressionPtr{ nullptr };
 }

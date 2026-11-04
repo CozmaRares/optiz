@@ -1,58 +1,43 @@
 #pragma once
 
-#include <cstdint>
 #include <expected>
+#include <string_view>
+
+#include "error.hpp"
+#include "token.hpp"
 
 #ifndef yyFlexLexerOnce
 #include <FlexLexer.h>
 #endif
 
-struct Token {
-    enum Type {
-        End     = 0,
-        Integer = 256,
-        Float,
-    };
+struct LexError final : Error {
+    using Error::Error;
 
-    union Value {
-        int64_t integer_value;
-        double float_value;
-    };
-
-    int type = End;
-    Value value{};
-
-    static Token FromType(int type) {
-        Token token;
-        token.type = type;
-        return token;
+    void Print() const override {
+        PrintDiagnostic("Lexer error: {}", message);
     }
-
-    static Token FromInteger(int64_t integer_value) {
-        Token token;
-        token.type                = Integer;
-        token.value.integer_value = integer_value;
-        return token;
-    }
-
-    static Token FromFloat(double float_value) {
-        Token token;
-        token.type              = Float;
-        token.value.float_value = float_value;
-        return token;
-    }
-
-private:
-    Token() = default;
-};
-
-struct LexError {
-    const char* message;
 };
 
 using LexResult = std::expected<Token, LexError>;
 
 class Lexer : public yyFlexLexer {
+    size_t offset = 0;
+    SourceLocation location;
+    SourceSpan matchedSpan;
+
+    void Track(std::string_view text) {
+        matchedSpan = { offset, text.size(), location };
+        offset += text.size();
+        for (char ch : text) {
+            if (ch == '\n') {
+                ++location.line;
+                location.column = 1;
+            } else {
+                ++location.column;
+            }
+        }
+    }
+
 public:
     using yyFlexLexer::yyFlexLexer;
 
