@@ -7,6 +7,7 @@
 #define INCLUDE_FLAG "I" SRC
 
 const char* const CPP_FLAGS[] = {
+    "-std=c++23",
     "-Wall",
     "-Wextra",
     "-fno-exceptions",

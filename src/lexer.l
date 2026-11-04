@@ -6,43 +6,41 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <limits>
+
+#undef YY_DECL
+#define YY_DECL LexResult Lexer::NextToken()
 %}
 
 %%
 
-[ \t\r\n]+                 ; /* Skip whitespace. */
+[ \t\r\n]+ ; /* Skip whitespace. */
+
+[0-9]+ {
+    errno = 0;
+    const std::intmax_t value = std::strtoimax(yytext, nullptr, 10);
+    if (errno == ERANGE || value > std::numeric_limits<int64_t>::max()) {
+        return std::unexpected(LexError{ "Integer literal out of range" });
+    }
+    return Token::FromInteger(static_cast<int64_t>(value));
+}
 
 [0-9]+(\.[0-9]*)?([eE][+-]?[0-9]+)? {
     errno = 0;
     const double value = std::strtod(yytext, nullptr);
-    token = errno == ERANGE ? Token::FromType(Token::Invalid) : Token::FromFloat(value);
-    return token.type;
+    if (errno == ERANGE) return std::unexpected(LexError{ "Float literal out of range" });
+    return Token::FromFloat(value);
 }
 
-[0-9]+                       {
-    errno = 0;
-    const std::intmax_t value = std::strtoimax(yytext, nullptr, 10);
-    if (errno == ERANGE || value > std::numeric_limits<int64_t>::max()) {
-        token = Token::FromType(Token::Invalid);
-    } else {
-        token = Token::FromInteger(static_cast<int64_t>(value));
-    }
-    return token.type;
+[-+*/%()] {
+    return Token::FromType(static_cast<unsigned char>(yytext[0]));
 }
 
-[-+*/%()]                    {
-    token = Token::FromType(static_cast<unsigned char>(yytext[0]));
-    return token.type;
+<<EOF>> {
+    return Token::FromType(Token::End);
 }
 
-<<EOF>>                      {
-    token = Token::FromType(Token::End);
-    return token.type;
-}
-
-.                            {
-    token = Token::FromType(Token::Invalid);
-    return token.type;
+. {
+    return std::unexpected(LexError{ "Unknown character" });
 }
 
 %%

@@ -11,6 +11,7 @@
 const char* const SRCS[] = {
     SRC "main.cpp",
     SRC "ast_printer.cpp",
+    SRC "parser.cpp",
     BUILD "lexer.cpp"
 };
 const int SRCS_LEN = sizeof(SRCS) / sizeof(SRCS[0]);

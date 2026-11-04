@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 
 #ifndef yyFlexLexerOnce
 #include <FlexLexer.h>
@@ -11,7 +12,6 @@ struct Token {
         End     = 0,
         Integer = 256,
         Float,
-        Invalid,
     };
 
     union Value {
@@ -46,17 +46,18 @@ private:
     Token() = default;
 };
 
+struct LexError {
+    const char* message;
+};
+
+using LexResult = std::expected<Token, LexError>;
+
 class Lexer : public yyFlexLexer {
 public:
-    Token token = Token::FromType(Token::End);
-
     using yyFlexLexer::yyFlexLexer;
 
     Lexer(const Lexer&)            = delete;
     Lexer& operator=(const Lexer&) = delete;
 
-    void NextToken() { yylex(); }
-
-private:
-    int yylex() override;
+    LexResult NextToken();
 };
