@@ -21,11 +21,16 @@ void setup(int argc, char** argv);
 void build_flags();
 void build_lexer();
 void build_optiz();
-void run_optiz();
+void run_optiz(const char* file);
 
 typedef struct {
     char* program;
-    bool should_run;
+
+    struct {
+        bool should_run;
+        const char* file;
+    } run_settings;
+
 } Program_Args;
 
 Program_Args parse_args(int argc, char** argv);
@@ -43,32 +48,36 @@ int main(int argc, char** argv) {
     build_lexer();
     build_optiz();
 
-    if (args.should_run) {
-        run_optiz();
+    if (args.run_settings.should_run) {
+        run_optiz(args.run_settings.file);
     }
 
     return 0;
 }
 
 void print_help(const char* program) {
-    nob_log(INFO, "Usage: %s [run]", program);
+    nob_log(INFO, "Usage: %s [run [file]]", program);
 }
 
 Program_Args parse_args(int argc, char** argv) {
-    Program_Args args;
+    Program_Args args = { 0, { 0, 0 } };
+    args.program      = shift(argv, argc);
 
-    args.program = shift(argv, argc);
+    if (argc == 0) return args;
 
-    args.should_run = false;
-    while (argc > 0) {
-        const char* arg = shift(argv, argc);
-        if (strcmp(arg, "run") == 0) {
-            args.should_run = true;
-        } else {
-            nob_log(ERROR, "Unknown argument: %s", arg);
-            print_help(args.program);
-            exit(1);
-        }
+    const char* command = shift(argv, argc);
+    if (strcmp(command, "run") != 0) {
+        nob_log(ERROR, "Unknown command: %s", command);
+        print_help(args.program);
+        exit(1);
+    }
+
+    args.run_settings.should_run = true;
+    if (argc > 0) args.run_settings.file = shift(argv, argc);
+    if (argc > 0) {
+        nob_log(ERROR, "Unexpected argument: %s", argv[0]);
+        print_help(args.program);
+        exit(1);
     }
 
     return args;
@@ -84,7 +93,7 @@ void build_flags() {
 
     nob_log(NOB_INFO, "rebuilding compile_flags.txt");
 
-    String_Builder flags = { 0 };
+    String_Builder flags = { 0, 0, 0 };
     for (int i = 0; i < CPP_FLAGS_LEN; ++i) {
         sb_append_cstr(&flags, CPP_FLAGS[i]);
         sb_append_cstr(&flags, "\n");
@@ -106,7 +115,7 @@ void build_lexer() {
     if (need_rebuild < 0) exit(1);
     if (!need_rebuild) return;
 
-    Cmd cmd = { 0 };
+    Cmd cmd = { 0, 0, 0 };
     cmd_append(&cmd, "flex", "-o", BUILD "lexer.cpp", SRC "lexer.l");
 
     if (!cmd_run(&cmd)) exit(1);
@@ -114,7 +123,7 @@ void build_lexer() {
 }
 
 void build_optiz() {
-    Cmd cmd = { 0 };
+    Cmd cmd = { 0, 0, 0 };
     cmd_append(&cmd, "clang++");
     da_append_many(&cmd, CPP_FLAGS, CPP_FLAGS_LEN);
     cmd_append(&cmd, "-o", BUILD "optiz");
@@ -124,9 +133,10 @@ void build_optiz() {
     cmd_free(cmd);
 }
 
-void run_optiz() {
-    Cmd cmd = { 0 };
+void run_optiz(const char* file) {
+    Cmd cmd = { 0, 0, 0 };
     cmd_append(&cmd, BUILD "optiz");
+    if (file) cmd_append(&cmd, file);
 
     if (!cmd_run(&cmd)) exit(1);
     cmd_free(cmd);

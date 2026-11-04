@@ -1,21 +1,34 @@
+#include <fstream>
 #include <iostream>
-#include <iterator>
-#include <sstream>
-#include <string>
+#include <print>
 
 #include "ast_printer.hpp"
 #include "parser.hpp"
 
-int main() {
-    const std::string source(std::istreambuf_iterator<char>{ std::cin }, {});
-    std::istringstream input(source);
-    Lexer lexer(&input);
+int main(int argc, char** argv) {
+    if (argc > 2) {
+        std::println(stderr, "Usage: {} [file]", argv[0]);
+        return 1;
+    }
+
+    std::ifstream file;
+    std::istream* source_input = &std::cin;
+    if (argc == 2) {
+        file.open(argv[1], std::ios::binary);
+        if (!file) {
+            std::println(stderr, "Cannot open file: {}", argv[1]);
+            return 1;
+        }
+        source_input = &file;
+    }
+
+    Lexer lexer(source_input);
     Parser parser(lexer);
 
     auto expression = parser.Parse();
 
     if (!expression) {
-        expression.error()->Print(source);
+        expression.error()->Print();
         return 1;
     }
 
