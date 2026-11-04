@@ -9,5 +9,5 @@ SpaceBeforeParens: ControlStatements
 AllowShortLoopsOnASingleLine: true
 AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 AlignConsecutiveAssignments:  Consecutive
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AccessModifierOffset: -4

@@ -26,7 +26,7 @@ struct Token {
 
     static Token FromFloat(double float_value) {
         Token token;
-        token.type = Float;
+        token.type              = Float;
         token.value.float_value = float_value;
         return token;
     }
@@ -39,14 +39,12 @@ class Lexer : public yyFlexLexer {
 public:
     using yyFlexLexer::yyFlexLexer;
 
-    Lexer(const Lexer&) = delete;
+    Lexer(const Lexer&)            = delete;
     Lexer& operator=(const Lexer&) = delete;
 
     Token token = Token::FromType(Token::End);
 
-    void NextToken() {
-        yylex();
-    }
+    void NextToken() { yylex(); }
 
 private:
     int yylex() override;

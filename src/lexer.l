@@ -3,7 +3,6 @@
 %{
 #include "lexer.hpp"
 #include <cstdlib>
-
 %}
 
 %%
