@@ -10,6 +10,7 @@
 
 const char* const SRCS[] = {
     SRC "main.cpp",
+    SRC "ast_printer.cpp",
     BUILD "lexer.cpp"
 };
 const int SRCS_LEN = sizeof(SRCS) / sizeof(SRCS[0]);
@@ -72,9 +73,6 @@ Program_Args parse_args(int argc, char** argv) {
     return args;
 }
 
-void setup(int argc, char** argv) {
-}
-
 void build_flags() {
     int need_rebuild = needs_rebuild1("compile_flags.txt", SRC_BUILD "config.h");
     if (need_rebuild < 0) exit(1);
@@ -86,14 +84,14 @@ void build_flags() {
     nob_log(NOB_INFO, "rebuilding compile_flags.txt");
 
     String_Builder flags = { 0 };
-    for (int i = 0; i < INCLUDES_LEN; ++i) {
-        sb_append_cstr(&flags, INCLUDES[i]);
+    for (int i = 0; i < CPP_FLAGS_LEN; ++i) {
+        sb_append_cstr(&flags, CPP_FLAGS[i]);
         sb_append_cstr(&flags, "\n");
     }
     bool ok = write_entire_file("compile_flags.txt", flags.items, flags.count);
     if (!ok) exit(1);
 
-    nob_log(INFO, "wrote %d include flags to compile_flags.txt", INCLUDES_LEN);
+    nob_log(INFO, "wrote %d flags to compile_flags.txt", CPP_FLAGS_LEN);
     sb_free(flags);
 }
 
@@ -116,8 +114,8 @@ void build_lexer() {
 
 void build_optiz() {
     Cmd cmd = { 0 };
-    cmd_append(&cmd, "clang++", "-Wall", "-Wextra");
-    da_append_many(&cmd, INCLUDES, INCLUDES_LEN);
+    cmd_append(&cmd, "clang++");
+    da_append_many(&cmd, CPP_FLAGS, CPP_FLAGS_LEN);
     cmd_append(&cmd, "-o", BUILD "optiz");
     da_append_many(&cmd, SRCS, SRCS_LEN);
 

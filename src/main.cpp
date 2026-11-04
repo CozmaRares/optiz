@@ -12,6 +12,9 @@ int main() {
             case Token::End:
                 std::cout << "End\n";
                 return 0;
+            case Token::Integer:
+                std::cout << "Integer: " << token.value.integer_value << '\n';
+                break;
             case Token::Float:
                 std::cout << "Float: " << token.value.float_value << '\n';
                 break;
