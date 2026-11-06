@@ -55,8 +55,7 @@ void print_help(const char* program) {
 }
 
 Program_Args parse_args(int argc, char** argv) {
-    Program_Args args = { 0 };
-    args.program      = shift(argv, argc);
+    Program_Args args = { .program = shift(argv, argc) };
 
     if (argc == 0) return args;
 
@@ -95,9 +94,33 @@ void build_lexer() {
 }
 
 bool dependencies_changed(const char* object, const char* depfile);
-bool nob_changed(const char* output) { return needs_rebuild1(output, "nob"); }
+#define nob_changed(output) needs_rebuild1(output, "nob")
+
+Cmd llvm_flags() {
+    Cmd cmd = { 0 };
+    cmd_append(&cmd, "llvm-config", "--cxxflags", "--ldflags", "--system-libs", "--libs", "core");
+    if (!cmd_run(&cmd, .stdout_path = BUILD "llvm-flags.txt")) exit(1);
+
+    String_Builder flags = { 0 };
+    if (!read_entire_file(BUILD "llvm-flags.txt", &flags)) exit(1);
+    sb_append_null(&flags);
+
+    // llvm-config emits whitespace-separated compiler and linker options.
+    for (char* flag = strtok(flags.items, " \t\r\n"); flag; flag = strtok(NULL, " \t\r\n")) {
+        // Suppress warnings from LLVM headers while retaining project warnings.
+        if (strncmp(flag, "-I", 2) == 0) {
+            cmd_append(&cmd, "-isystem");
+            if (flag[2]) cmd_append(&cmd, temp_strdup(flag + 2));
+        } else {
+            cmd_append(&cmd, temp_strdup(flag));
+        }
+    }
+    sb_free(flags);
+    return cmd;
+}
 
 void build_optiz() {
+    Cmd flags = { 0 };
     Cmd objects  = { 0 };
     Cmd cmd      = { 0 };
     Procs procs  = { 0 };
@@ -115,7 +138,14 @@ void build_optiz() {
         cmd_append(&objects, object);
 
         if (nob_changed(object) || needs_rebuild1(object, SRCS[i]) || dependencies_changed(object, deps)) {
+            if (!flags.items) flags = llvm_flags();
             cmd_append(&cmd, "clang++");
+            // Library and linker options are only needed for the final link.
+            for (size_t j = 0; j < flags.count; ++j) {
+                const char* flag = flags.items[j];
+                if (strncmp(flag, "-l", 2) == 0 || strncmp(flag, "-L", 2) == 0 || strncmp(flag, "-Wl,", 4) == 0) continue;
+                cmd_append(&cmd, flag);
+            }
             cmd_append(&cmd, "-std=c++23", "-Wall", "-Wextra", "-fno-exceptions", "-I" SRC "include");
             cmd_append(&cmd, "-MMD", "-MF", deps, "-MT", "dependencies");
             cmd_append(&cmd, "-c", SRCS[i], "-o", object);
@@ -134,14 +164,19 @@ void build_optiz() {
     if (!success) exit(1);
 
     if (link) {
-        cmd_append(&cmd, "clang++", "-std=c++23", "-Wall", "-Wextra", "-fno-exceptions", "-I" SRC "include");
+        if (!flags.items) flags = llvm_flags();
+        cmd_append(&cmd, "clang++");
+        cmd_append(&cmd, "-std=c++23", "-Wall", "-Wextra", "-fno-exceptions", "-I" SRC "include");
         da_append_many(&cmd, objects.items, objects.count);
+        da_append_many(&cmd, flags.items, flags.count);
+        cmd_append(&cmd, "-std=c++23");
         cmd_append(&cmd, "-o", BUILD "optiz");
         if (!cmd_run(&cmd)) exit(1);
     }
 
     cmd_free(cmd);
     cmd_free(objects);
+    cmd_free(flags);
 }
 
 void run_optiz(const char* file) {

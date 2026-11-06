@@ -3,6 +3,7 @@
 #include <print>
 
 #include "ast_printer.hpp"
+#include "codegen.hpp"
 #include "parser.hpp"
 
 int main(int argc, char** argv) {
@@ -34,6 +35,8 @@ int main(int argc, char** argv) {
 
     AstPrinter printer(std::cout);
     printer.Print(**expression);
+
+    Codegen codegen;
 
     std::cout << '\n';
 }
