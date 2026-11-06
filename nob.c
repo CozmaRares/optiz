@@ -1,4 +1,5 @@
 // NOLINTBEGIN(bugprone-suspicious-missing-comma)
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -13,68 +14,23 @@
 const char* const SRCS[] = {
     SRC "main.cpp",
     SRC "ast_printer.cpp",
+    SRC "codegen.cpp",
     SRC "parser.cpp",
     BUILD "lexer.cpp"
 };
 
 void build_lexer();
 void build_optiz();
-void run_optiz(const char* file);
-
-typedef struct {
-    char* program;
-
-    struct {
-        bool should_run;
-        const char* file;
-    } run_settings;
-
-} Program_Args;
-
-Program_Args parse_args(int argc, char** argv);
 
 int main(int argc, char** argv) {
     GO_REBUILD_URSELF(argc, argv);
-
-    Program_Args args = parse_args(argc, argv);
 
     if (!mkdir_if_not_exists(BUILD) || !mkdir_if_not_exists(BUILD "obj")) exit(1);
 
     build_lexer();
     build_optiz();
 
-    if (args.run_settings.should_run) {
-        run_optiz(args.run_settings.file);
-    }
-
     return 0;
-}
-
-void print_help(const char* program) {
-    nob_log(INFO, "Usage: %s [run [file]]", program);
-}
-
-Program_Args parse_args(int argc, char** argv) {
-    Program_Args args = { .program = shift(argv, argc) };
-
-    if (argc == 0) return args;
-
-    const char* command = shift(argv, argc);
-    if (strcmp(command, "run") != 0) {
-        nob_log(ERROR, "Unknown command: %s", command);
-        print_help(args.program);
-        exit(1);
-    }
-
-    args.run_settings.should_run = true;
-    if (argc > 0) args.run_settings.file = shift(argv, argc);
-    if (argc > 0) {
-        nob_log(ERROR, "Unexpected argument: %s", argv[0]);
-        print_help(args.program);
-        exit(1);
-    }
-
-    return args;
 }
 
 void build_lexer() {
@@ -94,7 +50,6 @@ void build_lexer() {
 }
 
 bool dependencies_changed(const char* object, const char* depfile);
-#define nob_changed(output) needs_rebuild1(output, "nob")
 
 Cmd llvm_flags() {
     Cmd cmd = { 0 };
@@ -120,12 +75,25 @@ Cmd llvm_flags() {
 }
 
 void build_optiz() {
-    Cmd flags = { 0 };
+    size_t jobs         = 0;
+    const char* setting = getenv("NOB_JOBS");
+    if (setting) {
+        char* end;
+        errno                    = 0;
+        unsigned long long value = strtoull(setting, &end, 10);
+        if (!isdigit((unsigned char)setting[0]) || *end || errno || value == 0 || value > SIZE_MAX) {
+            nob_log(ERROR, "NOB_JOBS must be a positive integer");
+            exit(1);
+        }
+        jobs = value;
+    }
+
+    Cmd flags    = { 0 };
     Cmd objects  = { 0 };
     Cmd cmd      = { 0 };
     Procs procs  = { 0 };
     bool success = true;
-    bool link    = nob_changed(BUILD "optiz");
+    bool link    = needs_rebuild1(BUILD "optiz", "nob");
 
     for (int i = 0; i < ARRAY_LEN(SRCS); ++i) {
         // Preserve the full source path in a flat filename to avoid collisions.
@@ -137,7 +105,7 @@ void build_optiz() {
         const char* deps   = temp_sprintf("%s.d", object);
         cmd_append(&objects, object);
 
-        if (nob_changed(object) || needs_rebuild1(object, SRCS[i]) || dependencies_changed(object, deps)) {
+        if (needs_rebuild1(object, "nob") || needs_rebuild1(object, SRCS[i]) || dependencies_changed(object, deps)) {
             if (!flags.items) flags = llvm_flags();
             cmd_append(&cmd, "clang++");
             // Library and linker options are only needed for the final link.
@@ -150,7 +118,7 @@ void build_optiz() {
             cmd_append(&cmd, "-MMD", "-MF", deps, "-MT", "dependencies");
             cmd_append(&cmd, "-c", SRCS[i], "-o", object);
 
-            if (!cmd_run(&cmd, .async = &procs)) {
+            if (!cmd_run(&cmd, .async = &procs, .max_procs = jobs)) {
                 success = false;
                 break;
             }
@@ -179,22 +147,19 @@ void build_optiz() {
     cmd_free(flags);
 }
 
-void run_optiz(const char* file) {
-    Cmd cmd = { 0 };
-    cmd_append(&cmd, BUILD "optiz");
-    if (file) cmd_append(&cmd, file);
-
-    if (!cmd_run(&cmd)) exit(1);
-    cmd_free(cmd);
-}
-
 bool dependencies_changed(const char* object, const char* depfile) {
     if (!file_exists(depfile)) return true;
 
     String_Builder deps = { 0 };
     if (!read_entire_file(depfile, &deps)) exit(1);
     // -MT dependencies gives every depfile a simple, fixed target.
-    char* colon = deps.count ? memchr(deps.items, ':', deps.count) : NULL;
+    char* colon = NULL;
+    for (size_t i = 0; i < deps.count; ++i) {
+        if (deps.items[i] == ':') {
+            colon = &deps.items[i];
+            break;
+        }
+    }
     if (!colon) {
         sb_free(deps);
         return true;
