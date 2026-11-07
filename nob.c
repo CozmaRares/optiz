@@ -13,6 +13,7 @@
 
 const char* const SRCS[] = {
     SRC "main.cpp",
+    SRC "compiler_options.cpp",
     SRC "ast_printer.cpp",
     SRC "codegen.cpp",
     SRC "parser.cpp",

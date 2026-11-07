@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <memory>
+
+#include "ast.hpp"
 
 #define TRY_ADVANCE() \
-    if (auto result = Advance(); !result) return result;
+    if (auto result = Advance(); !result) return result
 
 #define TRY_PARSE(var, expression) \
     auto var = (expression);       \
@@ -30,7 +33,7 @@ ParseResult Parser::Parse() {
     return expression;
 }
 
-// E -> T (('+' | '-') E)?
+// E ::= T (('+' | '-') E)?
 ParseResult Parser::Expression() {
     TRY_PARSE(left, Term());
 
@@ -43,7 +46,7 @@ ParseResult Parser::Expression() {
     return std::make_unique<ast::Binary>(op, std::move(*left), std::move(*right));
 }
 
-// T -> F (('*' | '/') T)*
+// T ::= F (('*' | '/') T)*
 ParseResult Parser::Term() {
     TRY_PARSE(left, Factor());
 
@@ -56,9 +59,18 @@ ParseResult Parser::Term() {
     return std::make_unique<ast::Binary>(op, std::move(*left), std::move(*right));
 }
 
-// F -> INT | FLOAT | '(' E ')'
+// F ::= ('+' | '-') F | INT | FLOAT | '(' E ')'
 ParseResult Parser::Factor() {
     switch (token.type) {
+        case '+':
+        case '-': {
+            const auto op = token;
+            TRY_ADVANCE();
+
+            TRY_PARSE(factor, Factor());
+
+            return std::make_unique<ast::Unary>(op, std::move(*factor));
+        }
         case Token::Integer: {
             auto expression = std::make_unique<ast::Integer>(token);
             TRY_ADVANCE();
